@@ -34,7 +34,7 @@ static_scenarios(;
 
 test_differentiation(
     AutoForwardDiff(),
-    DIT.no_matrices(static_scenarios());
+    filter(!DIT.has_matrix, static_scenarios());
     benchmark = :prepared,
     logging = LOGGING,
 )

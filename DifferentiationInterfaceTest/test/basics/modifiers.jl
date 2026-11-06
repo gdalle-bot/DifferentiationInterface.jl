@@ -188,6 +188,31 @@ end
     @test_throws ArgumentError DIT.mismatch(first(scens); kind = :other)
 end
 
+@testset "Map arrays" begin
+    immutable_copy(x) = copy(x)
+    mutable_copy(x) = copy(x)
+    m = DIT.map_arrays(immutable_copy, mutable_copy; func = f -> f)
+    for ts in DIT.cachify(scens; use_tuples = true)
+        new_ts = m(ts)
+        s, new_s = DIT.exec_scenario(ts), DIT.exec_scenario(new_ts)
+        @test DIT.primal_input(new_s) == DIT.primal_input(s)
+        if DIT.primal_input(s) isa AbstractArray
+            @test DIT.primal_input(new_s) !== DIT.primal_input(s)
+        end
+        @test DIT.func(new_s) === DIT.func(s)
+        # caches with tuples remain caches
+        c = only(DIT.contexts(new_s))
+        @test c isa Cache
+        @test DI.unwrap(c).useful_cache[1] !== DI.unwrap(only(DIT.contexts(s))).useful_cache[1]
+        for (b, new_b) in zip(DIT.output_buffers(s), DIT.output_buffers(new_s))
+            @test new_b !== b
+        end
+    end
+    counts = correctness_counts(AutoForwardDiff(), m(DIT.constantify(scens)))
+    @test counts.failures == 0
+    @test counts.passes > 0
+end
+
 @testset "Filters" begin
     @test DIT.has_matrix(@scenario value_and_gradient(f_arr, missing, ones(2, 2)) Result(6.0, ones(2, 2), nothing))
     @test !DIT.has_matrix(first(scens))

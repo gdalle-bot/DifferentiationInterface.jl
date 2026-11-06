@@ -6,8 +6,10 @@ A modifier is a callable struct which transforms scenarios. It only implements t
 - `applies_to(m, s)`: whether `m` can modify the scenario `s`
 - `modify_func(m, f, ref)`: new function, possibly using the primal output of the reference scenario `ref`
 - `modify_contexts(m, contexts, ref)`: new contexts
+- `modify_inputs(m, xs)`: new tuple of primal inputs
 - `modify_tangents(m, t)`: new tuple of tangents
-- `modify_output(m, k, x)`: new output of order `k`, applied to reference results and to output buffers
+- `modify_output(m, k, x)`: new output of order `k`, applied to reference results
+- `modify_buffer(m, k, x)`: new buffer for order `k` (the primal output `y` of in-place functions for `k = 0`), defaults to `modify_output`
 - `name_suffix(m)`: suffix added to the scenario name
 
 When applied to a `TripleScenario`, the function is modified once and shared between the three scenarios, and the contexts of the preparation and flush scenarios are zeroed.
@@ -24,8 +26,10 @@ applies_to(::ScenarioModifier, ::Scenario) = true
 applies_to(m::ScenarioModifier, ts::TripleScenario) = applies_to(m, exec_scenario(ts))
 modify_func(::ScenarioModifier, @nospecialize(f), @nospecialize(::Scenario)) = f
 modify_contexts(::ScenarioModifier, @nospecialize(contexts::Tuple), @nospecialize(::Scenario)) = contexts
+modify_inputs(::ScenarioModifier, @nospecialize(xs::Tuple)) = xs
 modify_tangents(::ScenarioModifier, t) = t
 modify_output(::ScenarioModifier, k::Integer, x) = x
+modify_buffer(m::ScenarioModifier, k::Integer, x) = modify_output(m, k, x)
 name_suffix(m::ScenarioModifier) = lowercase(string(nameof(typeof(m))))
 
 function modify_scenario(
@@ -36,10 +40,10 @@ function modify_scenario(
         zero_contexts::Bool,
     )
     op = operator(s)
-    new_value_args = map(y -> modify_output(m, 0, y), value_args(s))
+    new_value_args = map(y -> modify_buffer(m, 0, y), value_args(s))
     new_buffers = if is_inplace(op)
         map(
-            (k, b) -> modify_output(m, k, b),
+            (k, b) -> modify_buffer(m, k, b),
             filter(!iszero, returned_orders(op)),
             output_buffers(s),
         )
@@ -68,7 +72,7 @@ function modify_scenario(
         op,
         new_func,
         (new_value_args..., new_buffers...),
-        (primal_inputs(s)..., new_tangents..., new_contexts...);
+        (modify_inputs(m, primal_inputs(s))..., new_tangents..., new_contexts...);
         result = new_result,
         name = new_name,
     )
@@ -242,6 +246,45 @@ name_suffix(::ConstantOrCachify) = "constantorcachified"
 
 constantorcachify(s::AnyNewScenario) = ConstantOrCachify()(s)
 constantorcachify(scens::AbstractVector) = ConstantOrCachify()(scens)
+
+## Map arrays
+
+struct MapArrays{F, I, M} <: ScenarioModifier
+    func::F
+    immutable::I
+    mutable::M
+end
+
+map_array(f, x::AbstractArray) = f(x)
+map_array(f, x::Union{Tuple, NamedTuple}) = map(y -> map_array(f, y), x)
+map_array(f, x) = x
+
+map_context(m::MapArrays, c::Constant) = Constant(map_array(m.immutable, unwrap(c)))
+map_context(m::MapArrays, c::Cache) = Cache(map_array(m.mutable, unwrap(c)))
+map_context(m::MapArrays, c::ConstantOrCache) = ConstantOrCache(map_array(m.mutable, unwrap(c)))
+
+modify_func(m::MapArrays, @nospecialize(f), @nospecialize(::Scenario)) = m.func(f)
+modify_inputs(m::MapArrays, @nospecialize(xs::Tuple)) = map_array(m.immutable, xs)
+modify_tangents(m::MapArrays, t) = map_array(m.immutable, t)
+function modify_contexts(m::MapArrays, @nospecialize(contexts::Tuple), @nospecialize(::Scenario))
+    return map(c -> map_context(m, c), contexts)
+end
+modify_output(m::MapArrays, k::Integer, x) = map_array(m.immutable, x)
+modify_buffer(m::MapArrays, k::Integer, x) = map_array(m.mutable, x)
+name_suffix(::MapArrays) = "mapped arrays"
+
+"""
+    map_arrays(immutable, mutable; func=identity)
+
+Return a scenario modifier which converts every array in a scenario:
+
+- `immutable` is applied to primal inputs, tangents, constant contexts and reference results;
+- `mutable` is applied to the primal output of in-place functions, output buffers and caches;
+- `func` is applied to the function.
+
+Useful to test array types defined in other packages, for instance static or GPU arrays.
+"""
+map_arrays(immutable, mutable; func = identity) = MapArrays(func, immutable, mutable)
 
 ## Preparation mismatch
 
