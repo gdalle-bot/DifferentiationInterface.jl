@@ -18,6 +18,13 @@ test_differentiation
 benchmark_differentiation
 ```
 
+## Call-based scenarios
+
+```@docs
+Result
+custom_zero
+```
+
 ## Utilities
 
 ```@docs

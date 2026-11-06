@@ -130,6 +130,10 @@ const ALL_OPS = (
 
 include("utils.jl")
 
+include("basics/utils.jl")
+include("basics/operators.jl")
+include("basics/result.jl")
+
 include("scenarios/scenario.jl")
 include("scenarios/modify.jl")
 include("scenarios/default.jl")
@@ -152,6 +156,7 @@ export FIRST_ORDER, SECOND_ORDER
 export LegacyScenario, compute_results
 export test_differentiation, benchmark_differentiation
 export DifferentiationBenchmarkDataRow
+export Result, custom_zero
 
 @compile_workload begin
     default_scenarios(; include_constantified = true, include_cachified = true)

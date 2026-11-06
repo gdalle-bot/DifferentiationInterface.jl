@@ -34,6 +34,11 @@ LOGGING = get(ENV, "CI", "false") == "false"
         @testset verbose = true "Scenarios" begin
             include("scenario.jl")
         end
+        @testset verbose = true "Basics" begin
+            include("basics/operators.jl")
+            include("basics/result.jl")
+            include("basics/utils.jl")
+        end
     end
 
     if GROUP == "Zero" || GROUP == "All"
