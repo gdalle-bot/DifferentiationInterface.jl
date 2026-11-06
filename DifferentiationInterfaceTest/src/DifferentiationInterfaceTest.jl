@@ -99,7 +99,15 @@ using PrecompileTools: @compile_workload
 using ProgressMeter: ProgressUnknown, next!
 using Random: AbstractRNG, default_rng, rand!
 using SparseArrays:
-    SparseArrays, AbstractSparseMatrix, SparseMatrixCSC, findnz, nnz, sparse, spdiagm
+    SparseArrays,
+    AbstractSparseArray,
+    AbstractSparseMatrix,
+    SparseMatrixCSC,
+    findnz,
+    nnz,
+    nonzeros,
+    sparse,
+    spdiagm
 using Tables: Tables, AbstractRow, AbstractColumns
 using Test: @testset, @test, @test_throws
 

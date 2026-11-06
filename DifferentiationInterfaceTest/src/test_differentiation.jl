@@ -1,3 +1,73 @@
+## Helpers shared by legacy and call-based scenarios
+
+const AnyScenario = Union{LegacyScenario, TripleScenario}
+
+to_tested(s::LegacyScenario) = s
+to_tested(s::Union{Scenario, TripleScenario}) = TripleScenario(s)
+
+operator_symbol(s::LegacyScenario) = operator(s)
+operator_symbol(ts::TripleScenario) = operator_symbol(operator(ts))
+
+sort_key(s::LegacyScenario) = (operator(s), "", string(s.f))
+function sort_key(ts::TripleScenario)
+    return (operator_symbol(ts), string(nameof(operator(ts))), string(func(exec_scenario(ts))))
+end
+
+function group_by_operator(scenarios::AbstractVector{<:AnyScenario})
+    return Dict(
+        op => filter(s -> operator_symbol(s) == op, scenarios) for
+            op in unique(map(operator_symbol, scenarios))
+    )
+end
+
+function compatible(backend::AbstractADType, ts::TripleScenario)
+    op = operator(ts)
+    sym = operator_symbol(op)
+    place_compatible =
+        !has_inplace_function(exec_scenario(ts)) || Bool(inplace_support(backend))
+    sparse_compatible = sym in (:jacobian, :hessian) || !isa(backend, AutoSparse)
+    secondorder_compatible =
+        order(op) == 2 || !isa(backend, Union{SecondOrder, AutoSparse{<:SecondOrder}})
+    mixedmode_compatible = sym == :jacobian || !isa(backend, AutoSparse{<:MixedMode})
+    return place_compatible &&
+        secondorder_compatible &&
+        sparse_compatible &&
+        mixedmode_compatible
+end
+
+function progress_values(scen::LegacyScenario)
+    return [
+        (:operator_place, operator_place(scen)),
+        (:function_place, function_place(scen)),
+        (:function, scen.f),
+        (:input_type, typeof(scen.x)),
+        (:input_size, mysize(scen.x)),
+        (:output_type, typeof(scen.y)),
+        (:output_size, mysize(scen.y)),
+        (:nb_tangents, scen.t isa NTuple ? length(scen.t) : nothing),
+        (:nb_contexts, length(scen.contexts)),
+    ]
+end
+
+function progress_values(ts::TripleScenario)
+    s = exec_scenario(ts)
+    x, y, t = primal_input(s), primal_output(s), tangents(s)
+    return [
+        (:operator, operator(s)),
+        (:function, func(s)),
+        (:input_type, typeof(x)),
+        (:input_size, mysize(x)),
+        (:output_type, typeof(y)),
+        (:output_size, mysize(y)),
+        (:nb_tangents, t isa NTuple ? length(t) : nothing),
+        (:nb_contexts, length(contexts(s))),
+        (:mismatch, is_mismatch(ts)),
+    ]
+end
+
+# preparation tests are part of `test_correctness` for call-based scenarios
+test_prep(::AbstractADType, ::TripleScenario) = nothing
+
 """
 $(TYPEDSIGNATURES)
 
@@ -13,7 +83,7 @@ This function always creates and runs a `@testset`, though its contents may vary
 # Positional arguments
 
   - `backends::Vector{<:AbstractADType}`: the backends to test
-  - `scenarios::Vector{<:LegacyScenario}`: the scenarios on which to test these backends. Defaults to a standard set of first- and second-order scenarios, whose contents are not part of the public API and may change without notice.
+  - `scenarios::AbstractVector`: the scenarios on which to test these backends, either [`Scenario`](@ref)s, [`TripleScenario`](@ref)s or [`LegacyScenario`](@ref)s. Defaults to a standard set of first- and second-order scenarios, whose contents are not part of the public API and may change without notice.
 
 # Keyword arguments
 
@@ -47,7 +117,7 @@ Each setting tests/benchmarks a different subset of calls:
   - `atol=0`: absolute precision for correctness testing (when comparing to the reference outputs)
   - `rtol=1e-3`: relative precision for correctness testing (when comparing to the reference outputs)
   - `scenario_intact=true`: whether to check that the scenario remains unchanged after the operators are applied
-  - `sparsity=false`: whether to check sparsity patterns for Jacobians / Hessians
+  - `sparsity=false`: whether to check sparsity patterns for Jacobians / Hessians (only for [`LegacyScenario`](@ref)s, the check is automatic otherwise)
   - `reprepare::Bool=true`: whether to modify preparation before testing when the preparation arguments have the wrong size
 
 **Type stability options:**
@@ -72,7 +142,7 @@ Benchmarking is implemented in a package extension: please call `import Chairmar
 """
 function test_differentiation(
         backends::Vector{<:AbstractADType},
-        scenarios::Vector{<:LegacyScenario} = default_scenarios();
+        scenarios::AbstractVector = default_scenarios();
         testset_name::Union{String, Nothing} = nothing,
         # test categories
         correctness::Bool = true,
@@ -111,8 +181,9 @@ function test_differentiation(
     @assert allocations in (:none, :prepared, :full)
     @assert benchmark in (:none, :prepared, :full)
 
-    scenarios = filter(s -> !(operator(s) in excluded), scenarios)
-    scenarios = sort(scenarios; by = s -> (operator(s), string(s.f)))
+    scenarios = AnyScenario[to_tested(s) for s in scenarios]
+    scenarios = filter(s -> !(operator_symbol(s) in excluded), scenarios)
+    scenarios = sort(scenarios; by = sort_key)
 
     if isnothing(testset_name)
         title_additions =
@@ -141,15 +212,7 @@ function test_differentiation(
                             (:backend, "$backend - $i/$(length(backends))"),
                             (:scenario_type, "$op - $j/$(length(grouped_scenarios))"),
                             (:scenario, "$k/$(length(op_group))"),
-                            (:operator_place, operator_place(scen)),
-                            (:function_place, function_place(scen)),
-                            (:function, scen.f),
-                            (:input_type, typeof(scen.x)),
-                            (:input_size, mysize(scen.x)),
-                            (:output_type, typeof(scen.y)),
-                            (:output_size, mysize(scen.y)),
-                            (:nb_tangents, scen.t isa NTuple ? length(scen.t) : nothing),
-                            (:nb_contexts, length(scen.contexts)),
+                            progress_values(scen)...,
                         ],
                     )
                     adapted_backend = if adaptive_batchsize
@@ -233,7 +296,7 @@ Specifying the set of scenarios is mandatory for this function.
 """
 function benchmark_differentiation(
         backends,
-        scenarios::Vector{<:LegacyScenario};
+        scenarios::AbstractVector;
         testset_name::Union{String, Nothing} = nothing,
         benchmark::Symbol = :prepared,
         excluded::Vector{Symbol} = Symbol[],
