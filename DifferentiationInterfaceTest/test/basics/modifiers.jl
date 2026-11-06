@@ -8,6 +8,9 @@ import DifferentiationInterfaceTest as DIT
 using DifferentiationInterfaceTest: Scenario, TripleScenario, Result, @scenario
 using FiniteDiff: FiniteDiff
 using ForwardDiff: ForwardDiff
+using SparseArrays
+using SparseConnectivityTracer
+using SparseMatrixColorings
 using Test
 
 include("counting_testset.jl")
@@ -214,6 +217,26 @@ end
         end
     end
     counts = correctness_counts(AutoForwardDiff(), m(DIT.constantify(scens)))
+    @test counts.failures == 0
+    @test counts.passes > 0
+end
+
+@testset "Buffers are not modified" begin
+    # buffers are never read, and scaling them could destroy their sparsity pattern
+    f!(y, x) = (y .= x .^ 2; nothing)
+    x = [1.0, 2.0, 3.0]
+    jac = spdiagm(2x)
+    buffer = DIT.custom_zero(jac)  # explicit zeros in the structural pattern
+    s = Scenario(jacobian!, f!, (zeros(3), buffer), (x,); result = Result(x .^ 2, jac, nothing))
+    for m in (DIT.zero_der, DIT.closurify, DIT.constantify, DIT.constantorcachify)
+        @test only(DIT.output_buffers(m(s))) === buffer
+    end
+    sparse_backend = AutoSparse(
+        AutoForwardDiff();
+        sparsity_detector = TracerSparsityDetector(),
+        coloring_algorithm = GreedyColoringAlgorithm(),
+    )
+    counts = correctness_counts(sparse_backend, [DIT.constantify(TripleScenario(s))])
     @test counts.failures == 0
     @test counts.passes > 0
 end
