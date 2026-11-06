@@ -161,6 +161,7 @@ include("tests/prep_eval.jl")
 include("tests/type_stability.jl")
 include("tests/benchmark.jl")
 include("tests/allocs_eval.jl")
+include("tests/allocations.jl")
 
 include("test_differentiation.jl")
 
