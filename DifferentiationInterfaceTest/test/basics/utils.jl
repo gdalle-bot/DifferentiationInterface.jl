@@ -18,7 +18,13 @@ DIT.custom_zero(::MyParameters) = MyParameters(0.0)
     @test custom_zero(3) === 0
     @test custom_zero(1.0 + 2.0im) === 0.0 + 0.0im
     @test custom_zero([1.0, 2.0]) == [0.0, 0.0]
-    @test custom_zero(sparse([1.0 0.0; 0.0 2.0])) isa SparseMatrixCSC
+    A = sparse([1, 2, 1], [1, 2, 2], [1.0, 2.0, 0.0])
+    A0 = custom_zero(A)
+    @test A0 isa SparseMatrixCSC
+    @test iszero(A0)
+    @test findnz(A0)[1:2] == findnz(A)[1:2]  # explicit zeros are kept
+    @test A == sparse([1, 2, 1], [1, 2, 2], [1.0, 2.0, 0.0])
+    @test custom_zero(sparsevec([2], [1.0], 3)) == sparsevec([2], [0.0], 3)
     @test custom_zero([[1.0], [2.0, 3.0]]) == [[0.0], [0.0, 0.0]]
     @test custom_zero(([1.0], 2.0)) == ([0.0], 0.0)
     @test custom_zero((; a = [1.0], b = 2.0)) == (; a = [0.0], b = 0.0)

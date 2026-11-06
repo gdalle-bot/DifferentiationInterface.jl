@@ -35,6 +35,11 @@ end
     @test x == [1.0, 2.0]
     @test !DIT.should_reprepare(ts)
     @test TripleScenario(ts) === ts
+
+    # output buffers are kept as is
+    g = [0.0, 0.0]
+    ts_buf = TripleScenario(@scenario gradient!(f_scalar, g, missing, x, c) Result(; order1 = 6x))
+    @test only(DIT.output_buffers(DIT.prep_scenario(ts_buf))) === g
     @test string(ts) == string(exec)
 
     # the function is shared, also after a deep copy

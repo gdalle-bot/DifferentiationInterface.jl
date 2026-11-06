@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`)
+- `test_differentiation` accepts call-based scenarios, possibly mixed with legacy ones
 - Generic correctness engine for call-based scenarios: every preparation candidate (none, strict, non-strict, same point), two executions separated by a flush call, automatic sparsity pattern check for sparse backends, preparation mismatch scenarios
 
 ### Changed
