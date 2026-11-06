@@ -1,6 +1,7 @@
 module DifferentiationInterfaceTestComponentArraysExt
 
 using ComponentArrays: ComponentVector
+using DifferentiationInterface: value_and_gradient, value_and_pullback, value_and_pushforward
 import DifferentiationInterfaceTest as DIT
 using LinearAlgebra: dot
 
@@ -21,42 +22,32 @@ function comp_to_num_pullback(x, dy)
     return comp_to_num_gradient(x) .* dy
 end
 
-function comp_to_num_scenarios_onearg(x::ComponentVector; dx::AbstractVector, dy::Number)
+function comp_to_num_canonical_onearg(x::ComponentVector; dx::AbstractVector, dy::Number)
     f = comp_to_num
-    dy_from_dx = comp_to_num_pushforward(x, dx)
-    dx_from_dy = comp_to_num_pullback(x, dy)
-    grad = comp_to_num_gradient(x)
-
-    # pushforward stays out of place
-    scens = DIT.LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                DIT.LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
-                DIT.LegacyScenario{:gradient, pl_op}(f, x; res1 = grad),
-            ],
-        )
-    end
-    for pl_op in (:out,)
-        append!(scens, [DIT.LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,))])
-    end
-    return scens
+    return [
+        DIT.canonical_scenario(
+            value_and_pullback, f, x, (dy,); res1 = (comp_to_num_pullback(x, dy),)
+        ),
+        DIT.canonical_scenario(value_and_gradient, f, x; res1 = comp_to_num_gradient(x)),
+        DIT.canonical_scenario(
+            value_and_pushforward, f, x, (dx,); res1 = (comp_to_num_pushforward(x, dx),)
+        ),
+    ]
 end
 
 ## Gather
 
-function DIT.component_scenarios()
+function DIT.component_scenarios(; include_mismatched = true)
     dy_ = -1 / 12
 
     x_comp = ComponentVector(; a = float.(1:4), b = float.(5:6))
     dx_comp = ComponentVector(; a = float.(4:-1:1), b = float.(6:-1:5))
 
-    scens = vcat(
-        # one argument
-        comp_to_num_scenarios_onearg(x_comp::ComponentVector; dx = dx_comp, dy = dy_),
-        # two arguments
-    )
+    canonical = comp_to_num_canonical_onearg(x_comp; dx = dx_comp, dy = dy_)
+    scens = DIT.TripleScenario[
+        DIT.TripleScenario(v) for s in canonical for v in DIT.all_variants(s)
+    ]
+    include_mismatched && DIT.add_mismatched!(scens)
     return scens
 end
 
