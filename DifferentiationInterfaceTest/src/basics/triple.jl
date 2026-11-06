@@ -73,6 +73,15 @@ is_mismatch(ts::TripleScenario) = ts.mismatch
 
 operator(ts::TripleScenario) = operator(exec_scenario(ts))
 name(ts::TripleScenario) = name(exec_scenario(ts))
+"""
+    func(ts::TripleScenario)
+
+Return the function of `ts`, taken from its preparation scenario (the execution function of a mismatch scenario may be `nothing`).
+"""
+func(ts::TripleScenario) = func(prep_scenario(ts))
+result(ts::TripleScenario) = result(exec_scenario(ts))
+primal_input(ts::TripleScenario) = primal_input(exec_scenario(ts))
+primal_output(ts::TripleScenario) = primal_output(exec_scenario(ts))
 
 function Base.show(io::IO, ts::TripleScenario)
     show(io, exec_scenario(ts))

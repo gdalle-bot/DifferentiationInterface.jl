@@ -30,11 +30,11 @@ function differentiatewith_scenarios()
     end
     # with bad_scens, everything would break
     bad_scens = map(outofplace_scens) do scen
-        DIT.change_function(scen, ADBreaker(scen.f))
+        DIT.change_function(scen, ADBreaker(DIT.func(scen)))
     end
     # with good_scens, everything is fixed
     good_scens = map(bad_scens) do scen
-        DIT.change_function(scen, DifferentiateWith(scen.f, AutoFiniteDiff()))
+        DIT.change_function(scen, DifferentiateWith(DIT.func(scen), AutoFiniteDiff()))
     end
     return good_scens
 end
@@ -49,18 +49,19 @@ test_differentiation(
 
 @testset "ChainRules tests" begin
     @testset for scen in filter(differentiatewith_scenarios()) do scen
-            DIT.operator(scen) == :pullback
+            DIT.operator(scen) === pullback && !DIT.is_mismatch(scen)
         end
-        ChainRulesTestUtils.test_rrule(scen.f, scen.x; rtol = 1.0e-4)
+        ChainRulesTestUtils.test_rrule(DIT.func(scen), DIT.primal_input(scen); rtol = 1.0e-4)
     end
 end;
 
 @testset "Mooncake tests" begin
     @testset for scen in filter(differentiatewith_scenarios()) do scen
-            DIT.operator(scen) == :pullback
+            DIT.operator(scen) === pullback && !DIT.is_mismatch(scen)
         end
         Mooncake.TestUtils.test_rule(
-            StableRNG(0), scen.f, scen.x; is_primitive = true, mode = Mooncake.ReverseMode
+            StableRNG(0), DIT.func(scen), DIT.primal_input(scen);
+            is_primitive = true, mode = Mooncake.ReverseMode,
         )
     end
 end;

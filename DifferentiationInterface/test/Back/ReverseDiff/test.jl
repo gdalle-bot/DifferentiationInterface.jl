@@ -36,7 +36,6 @@ test_differentiation(
 test_differentiation(
     MyAutoSparse.(vcat(backends, second_order_backends)),
     sparse_scenarios();
-    sparsity = true,
     logging = LOGGING,
 );
 

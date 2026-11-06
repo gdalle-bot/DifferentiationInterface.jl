@@ -165,6 +165,14 @@ end
     @test string(new_s) == "name [new function]"
     new_ts = DIT.change_function(TripleScenario(s), g)
     @test DIT.func(DIT.prep_scenario(new_ts)) === g
+    @test DIT.func(new_ts) === g
+    # mismatch scenarios remain mismatched
+    mismatched = DIT.change_function(DIT.mismatch(s), g)
+    @test DIT.func(DIT.prep_scenario(mismatched)) === g
+    @test DIT.func(mismatched) === g
+    @test isnothing(DIT.func(DIT.exec_scenario(mismatched)))
+    # the function of a mismatch scenario can be wrapped, like `scen.f` before
+    @test DIT.func(DIT.mismatch(s)) === DIT.func(s)
 end
 
 @testset "Compute results" begin

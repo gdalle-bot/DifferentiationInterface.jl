@@ -135,9 +135,8 @@ end
         if VERSION < v"1.11"
             sparse_scenarios()
         else
-            filter(s -> s.x isa AbstractVector, sparse_scenarios())
+            filter(s -> DIT.primal_input(s) isa AbstractVector, sparse_scenarios())
         end;
-        sparsity = true,
         logging = LOGGING,
     )
 end
