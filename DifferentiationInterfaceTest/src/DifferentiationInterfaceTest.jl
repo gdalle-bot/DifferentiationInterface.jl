@@ -147,6 +147,7 @@ include("basics/variants.jl")
 
 include("scenarios/scenario.jl")
 include("scenarios/modify.jl")
+include("basics/modifiers.jl")
 include("scenarios/default.jl")
 include("scenarios/sparse.jl")
 include("scenarios/complex.jl")
