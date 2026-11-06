@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Result` and `custom_zero`, the first building blocks of call-based scenarios
+- Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`)
 
 ### Changed
 
