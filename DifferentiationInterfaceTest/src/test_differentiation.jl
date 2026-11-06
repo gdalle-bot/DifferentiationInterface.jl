@@ -13,7 +13,7 @@ This function always creates and runs a `@testset`, though its contents may vary
 # Positional arguments
 
   - `backends::Vector{<:AbstractADType}`: the backends to test
-  - `scenarios::Vector{<:Scenario}`: the scenarios on which to test these backends. Defaults to a standard set of first- and second-order scenarios, whose contents are not part of the public API and may change without notice.
+  - `scenarios::Vector{<:LegacyScenario}`: the scenarios on which to test these backends. Defaults to a standard set of first- and second-order scenarios, whose contents are not part of the public API and may change without notice.
 
 # Keyword arguments
 
@@ -72,7 +72,7 @@ Benchmarking is implemented in a package extension: please call `import Chairmar
 """
 function test_differentiation(
         backends::Vector{<:AbstractADType},
-        scenarios::Vector{<:Scenario} = default_scenarios();
+        scenarios::Vector{<:LegacyScenario} = default_scenarios();
         testset_name::Union{String, Nothing} = nothing,
         # test categories
         correctness::Bool = true,
@@ -233,7 +233,7 @@ Specifying the set of scenarios is mandatory for this function.
 """
 function benchmark_differentiation(
         backends,
-        scenarios::Vector{<:Scenario};
+        scenarios::Vector{<:LegacyScenario};
         testset_name::Union{String, Nothing} = nothing,
         benchmark::Symbol = :prepared,
         excluded::Vector{Symbol} = Symbol[],

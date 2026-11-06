@@ -30,7 +30,7 @@ Of course we know the true gradient mapping:
 ∇f(x::AbstractArray) = cos.(x)
 ```
 
-DifferentiationInterfaceTest.jl relies with so-called [`Scenario`](@ref)s, in which you encapsulate the information needed for your test:
+DifferentiationInterfaceTest.jl relies with so-called [`LegacyScenario`](@ref)s, in which you encapsulate the information needed for your test:
 
 - the operator category (here `:gradient`)
 - the behavior of the operator (either `:in` or `:out` of place)
@@ -43,8 +43,8 @@ DifferentiationInterfaceTest.jl relies with so-called [`Scenario`](@ref)s, in wh
 xv = rand(Float32, 3)
 xm = rand(Float64, 3, 2)
 scenarios = [
-    Scenario{:gradient,:out}(f, xv; res1=∇f(xv)),
-    Scenario{:gradient,:out}(f, xm; res1=∇f(xm)),
+    LegacyScenario{:gradient,:out}(f, xv; res1=∇f(xv)),
+    LegacyScenario{:gradient,:out}(f, xm; res1=∇f(xm)),
 ];
 nothing  # hide
 ```

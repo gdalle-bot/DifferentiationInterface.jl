@@ -36,7 +36,7 @@ function mystatic(x::DI.Cache{<:Union{Tuple, NamedTuple}})
 end
 mystatic(::Nothing) = nothing
 
-function mystatic(scen::DIT.Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function mystatic(scen::DIT.LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     (; f, x, y, t, contexts, prep_args, res1, res2, name) = scen
     new_prep_args = (;
         x = mystatic(prep_args.x), contexts = map(mystatic, prep_args.contexts), t = mystatic(t),
@@ -44,7 +44,7 @@ function mystatic(scen::DIT.Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fu
     if pl_fun == :in
         new_prep_args = (; new_prep_args..., y = mymutablestatic(prep_args.y))
     end
-    return DIT.Scenario{op, pl_op, pl_fun}(;
+    return DIT.LegacyScenario{op, pl_op, pl_fun}(;
         f = mystatic(f),
         x = mystatic(x),
         y = pl_fun == :in ? mymutablestatic(y) : mystatic(y),
