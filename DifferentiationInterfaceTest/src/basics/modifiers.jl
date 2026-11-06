@@ -87,7 +87,7 @@ function (m::ScenarioModifier)(@nospecialize(ts::TripleScenario))
         throw(ArgumentError("Modifier `$m` does not apply to scenario `$ts`"))
     end
     new_func = modify_func(m, func(exec), exec)
-    function modify_other(s)
+    function modify_other(s::Scenario)
         other_func = func(s) === func(exec) ? new_func : modify_func(m, func(s), exec)
         return modify_scenario(m, s, exec, other_func; zero_contexts = true)
     end
