@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** all scenario generators (`default_scenarios`, `sparse_scenarios`, `complex_scenarios`, `complex_sparse_scenarios`, `empty_scenarios`, `allocfree_scenarios`, `static_scenarios`, `component_scenarios`, `gpu_scenarios`) return `TripleScenario`s, while keeping their keyword arguments. Most of them add preparation mismatch scenarios unless `include_mismatched=false`.
 - Correctness tests are stricter: every order returned by an operator must be present in the reference result and is compared, tuples of tangents must have the right length, output buffers must be returned as is in every execution, and every preparation (none, strict, non-strict, same point) is tested.
 - The sparsity check is automatic for sparse backends and sparse reference matrices, and compares structural patterns instead of numbers of nonzeros.
-- Test `value_gradient_and_hvp(!)` instead of the deprecated `gradient_and_hvp(!)`, which requires DifferentiationInterface v0.7.22.
+- Test `value_gradient_and_hvp(!)` instead of the deprecated `gradient_and_hvp(!)`, which requires DifferentiationInterface v0.7.22 ([#1086](https://github.com/JuliaDiff/DifferentiationInterface.jl/pull/1086))
 
 ### Added
 
