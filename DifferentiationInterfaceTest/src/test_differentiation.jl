@@ -65,6 +65,8 @@ function progress_values(ts::TripleScenario)
     ]
 end
 
+is_mismatch(::LegacyScenario) = false
+
 # preparation tests are part of `test_correctness` for call-based scenarios
 test_prep(::AbstractADType, ::TripleScenario) = nothing
 
@@ -234,7 +236,9 @@ function test_differentiation(
                         test_prep(adapted_backend, scen)
                     end
                     yield()
-                    (type_stability != :none) && @testset "Type stability" begin
+                    # mismatch scenarios are only meant for correctness tests
+                    (type_stability != :none && !is_mismatch(scen)) &&
+                        @testset "Type stability" begin
                         test_jet(
                             adapted_backend,
                             scen;
@@ -244,7 +248,8 @@ function test_differentiation(
                         )
                     end
                     yield()
-                    (allocations != :none) && @testset "Allocations" begin
+                    (allocations != :none && !is_mismatch(scen)) &&
+                        @testset "Allocations" begin
                         test_alloccheck(
                             adapted_backend,
                             scen;
@@ -253,7 +258,8 @@ function test_differentiation(
                         )
                     end
                     yield()
-                    (benchmark != :none) && @testset "Benchmark" begin
+                    (benchmark != :none && !is_mismatch(scen)) &&
+                        @testset "Benchmark" begin
                         run_benchmark!(
                             benchmark_data,
                             adapted_backend,

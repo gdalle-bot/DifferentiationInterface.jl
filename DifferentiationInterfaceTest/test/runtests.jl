@@ -54,6 +54,7 @@ LOGGING = get(ENV, "CI", "false") == "false"
         @testset verbose = true "Engine" begin
             include("engine/correctness.jl")
             include("engine/loop.jl")
+            include("engine/checks.jl")
         end
         @testset verbose = true "Standard" begin
             include("standard.jl")
