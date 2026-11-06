@@ -130,7 +130,7 @@ function test_correctness(
     end
     exec_s, flush_s = exec_scenario(new_ts), flush_scenario(new_ts)
     op = operator(new_ts)
-    reference = result(exec_s)
+    reference = result(exec_s)::Result  # guaranteed by the `TripleScenario` constructor
     for prep_tup in preparation_candidates(backend, new_ts; reprepare)
         out1, value_in1, buffers_in1 = call_scenario(exec_s, prep_tup, backend)
         isempty(prep_tup) || call_scenario(flush_s, prep_tup, backend)
