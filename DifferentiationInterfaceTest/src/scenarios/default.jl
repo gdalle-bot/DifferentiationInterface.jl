@@ -658,6 +658,15 @@ end
 make_post(x, t) = isnothing(t) ? (x,) : (x, t)
 
 """
+    add_mismatched!(scens)
+
+Append one preparation mismatch scenario for each scenario of `scens`.
+"""
+function add_mismatched!(scens::AbstractVector)
+    return append!(scens, map(ts -> mismatch(ts; kind = :function), scens))
+end
+
+"""
     canonical_scenario(op, f, x, [t]; res1, res2=nothing)
 
 Create the canonical scenario of an operator family for an out-of-place function `f`: out-of-place operator with value, whose primal output is computed by calling `f`.
@@ -929,9 +938,7 @@ function default_scenarios(;
     for m in modifiers
         append!(final_scens, m(scens))
     end
-    if include_mismatched
-        append!(final_scens, map(ts -> mismatch(ts; kind = :function), final_scens))
-    end
+    include_mismatched && add_mismatched!(final_scens)
     include_smaller && append!(final_scens, smaller_scens)
     return final_scens
 end

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios
+- **Breaking:** `sparse_scenarios`, `complex_scenarios`, `complex_sparse_scenarios`, `empty_scenarios` and `allocfree_scenarios` return call-based `TripleScenario`s; the first four accept `include_mismatched=true`
 - **Breaking:** `default_scenarios` returns call-based `TripleScenario`s, with one scenario per operator variant, and new keyword arguments `include_mismatched=true` (preparation mismatch scenarios) and `modifiers=()`
 - Test `value_gradient_and_hvp(!)` instead of the deprecated `gradient_and_hvp(!)`, which requires DifferentiationInterface v0.7.22
 
