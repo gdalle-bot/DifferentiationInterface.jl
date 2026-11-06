@@ -125,17 +125,6 @@ List of all second-order operators, to facilitate exclusion during tests.
 """
 const SECOND_ORDER = [:hvp, :second_derivative, :hessian]
 
-const ALL_OPS = (
-    :pushforward,
-    :pullback,
-    :derivative,
-    :gradient,
-    :jacobian,
-    :hvp,
-    :second_derivative,
-    :hessian,
-)
-
 include("utils.jl")
 
 include("basics/utils.jl")
@@ -144,10 +133,9 @@ include("basics/result.jl")
 include("basics/scenario.jl")
 include("basics/triple.jl")
 include("basics/variants.jl")
-
-include("scenarios/scenario.jl")
-include("scenarios/modify.jl")
+include("basics/wrappers.jl")
 include("basics/modifiers.jl")
+
 include("scenarios/default.jl")
 include("scenarios/sparse.jl")
 include("scenarios/complex.jl")
@@ -156,18 +144,15 @@ include("scenarios/empty.jl")
 include("scenarios/extensions.jl")
 
 include("tests/correctness.jl")
-include("tests/correctness_eval.jl")
 include("tests/counterparts.jl")
-include("tests/prep_eval.jl")
 include("tests/type_stability.jl")
 include("tests/benchmark.jl")
-include("tests/allocs_eval.jl")
 include("tests/allocations.jl")
 
 include("test_differentiation.jl")
 
 export FIRST_ORDER, SECOND_ORDER
-export LegacyScenario, compute_results
+export compute_results
 export test_differentiation, benchmark_differentiation
 export DifferentiationBenchmarkDataRow
 export Scenario, TripleScenario, Result, @scenario, custom_zero

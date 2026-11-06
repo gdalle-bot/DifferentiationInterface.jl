@@ -123,7 +123,6 @@ function test_correctness(
         rtol::Real,
         scenario_intact::Bool,
         reprepare::Bool,
-        sparsity::Bool = false,  # automatic for call-based scenarios
     )
     new_ts = deepcopy(ts)
     if is_mismatch(new_ts)

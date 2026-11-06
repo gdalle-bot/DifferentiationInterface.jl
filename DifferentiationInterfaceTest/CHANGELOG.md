@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hook-based scenario modifiers for call-based scenarios (`zero_der`, `batchify`, `closurify`, `constantify`, `cachify`, `constantorcachify`, `change_function`, `mismatch`, `compute_results`)
 - Generic correctness engine for call-based scenarios: every preparation candidate (none, strict, non-strict, same point), two executions separated by a flush call, automatic sparsity pattern check for sparse backends, preparation mismatch scenarios
 
+### Removed
+
+- **Breaking:** `LegacyScenario`, its constructors and modifiers (`zero` is replaced by `zero_der`, `same_function` and `no_matrices` are removed), and the `sparsity` keyword of `test_differentiation` (the sparsity check is automatic)
+
 ### Changed
 
 - **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios

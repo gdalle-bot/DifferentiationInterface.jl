@@ -1,13 +1,13 @@
 using DifferentiationInterface
 using DifferentiationInterfaceTest
-using DifferentiationInterfaceTest: default_scenarios
+using DifferentiationInterfaceTest: default_scenarios, sparse_scenarios
 import DifferentiationInterfaceTest as DIT
 using ForwardDiff: ForwardDiff
 using Test
 
 @testset "Naming" begin
-    scen = LegacyScenario{:gradient, :out}(
-        sum, zeros(10); res1 = ones(10), name = "My pretty little scenario"
+    scen = @scenario "My pretty little scenario" gradient(sum, missing, zeros(10)) Result(;
+        order1 = ones(10)
     )
     @test string(scen) == "My pretty little scenario"
 
@@ -18,20 +18,6 @@ using Test
     data = benchmark_differentiation(
         AutoForwardDiff(), [scen]; testset_name = "My amazing test set"
     )
-end;
-
-@testset "Compute results (legacy)" begin
-    scens = DifferentiationInterfaceTest.legacy_default_scenarios()
-    new_scens = map(s -> compute_results(s, AutoForwardDiff()), scens)
-
-    isapprox_robust(x, y) = isapprox(x, y)
-    isapprox_robust(x::Nothing, y::Nothing) = true
-    isapprox_robust(x::NTuple, y::NTuple) = all(map(isapprox, x, y))
-
-    for (sa, sb) in zip(scens, new_scens)
-        @test isapprox_robust(sa.res1, sb.res1)
-        @test isapprox_robust(sa.res2, sb.res2)
-    end
 end;
 
 @testset "Compute results" begin
@@ -50,16 +36,11 @@ end;
 end;
 
 @testset "Coverage of default scenarios" begin
-    # each legacy scenario tested the operator with and without value
-    function legacy_counts(scens)
-        return Dict(
-            k => 2 * count(s -> (DIT.operator(s), DIT.operator_place(s), DIT.function_place(s)) == k, scens)
-                for k in unique(map(s -> (DIT.operator(s), DIT.operator_place(s), DIT.function_place(s)), scens))
-        )
-    end
+    # number of calls per (operator, operator place, function place) in the legacy generators
     function new_counts(scens)
         key(ts) = (DIT.operator_symbol(ts), DIT.operator_place(ts), DIT.function_place(ts))
-        return Dict(k => count(ts -> key(ts) == k, scens) for k in unique(map(key, scens)))
+        scens = filter(!DIT.is_mismatch, scens)
+        return sort(collect(Dict(k => count(ts -> key(ts) == k, scens) for k in unique(map(key, scens)))))
     end
     all_kwargs = (;
         include_closurified = true,
@@ -68,18 +49,16 @@ end;
         include_constantorcachified = true,
         use_tuples = true,
     )
-    for kwargs in [(;), all_kwargs]
-        all_scens = default_scenarios(; kwargs...)
-        scens = filter(!DIT.is_mismatch, all_scens)
-        @test new_counts(scens) == legacy_counts(DIT.legacy_default_scenarios(; kwargs...))
-        # one mismatch scenario for each scenario
-        @test count(DIT.is_mismatch, all_scens) == length(scens)
-    end
+    scens = default_scenarios()
+    @test new_counts(scens) == [(:derivative, :in, :in) => 4, (:derivative, :in, :out) => 4, (:derivative, :out, :in) => 4, (:derivative, :out, :out) => 6, (:gradient, :in, :out) => 4, (:gradient, :out, :out) => 4, (:hessian, :in, :out) => 4, (:hessian, :out, :out) => 4, (:hvp, :in, :out) => 8, (:hvp, :out, :out) => 8, (:jacobian, :in, :in) => 10, (:jacobian, :in, :out) => 10, (:jacobian, :out, :in) => 10, (:jacobian, :out, :out) => 10, (:pullback, :in, :in) => 20, (:pullback, :in, :out) => 28, (:pullback, :out, :in) => 28, (:pullback, :out, :out) => 40, (:pushforward, :in, :in) => 28, (:pushforward, :in, :out) => 28, (:pushforward, :out, :in) => 28, (:pushforward, :out, :out) => 40, (:second_derivative, :in, :out) => 4, (:second_derivative, :out, :out) => 6]
+    # one mismatch scenario for each scenario
+    @test count(DIT.is_mismatch, scens) == count(!DIT.is_mismatch, scens)
+    scens = default_scenarios(; all_kwargs...)
+    @test new_counts(scens) == [(:derivative, :in, :in) => 20, (:derivative, :in, :out) => 20, (:derivative, :out, :in) => 20, (:derivative, :out, :out) => 30, (:gradient, :in, :out) => 20, (:gradient, :out, :out) => 20, (:hessian, :in, :out) => 20, (:hessian, :out, :out) => 20, (:hvp, :in, :out) => 40, (:hvp, :out, :out) => 40, (:jacobian, :in, :in) => 50, (:jacobian, :in, :out) => 50, (:jacobian, :out, :in) => 50, (:jacobian, :out, :out) => 50, (:pullback, :in, :in) => 100, (:pullback, :in, :out) => 140, (:pullback, :out, :in) => 140, (:pullback, :out, :out) => 200, (:pushforward, :in, :in) => 140, (:pushforward, :in, :out) => 140, (:pushforward, :out, :in) => 140, (:pushforward, :out, :out) => 200, (:second_derivative, :in, :out) => 20, (:second_derivative, :out, :out) => 30]
+    @test count(DIT.is_mismatch, scens) == count(!DIT.is_mismatch, scens)
     # scenarios with smaller preparation inputs
     scens = default_scenarios(; include_normal = false, include_smaller = true, include_mismatched = false)
-    @test new_counts(scens) ==
-        legacy_counts(DIT.legacy_default_scenarios(; include_normal = false, include_smaller = true))
-    @test all(ts -> !DIT.is_mismatch(ts), scens)
+    @test new_counts(scens) == [(:derivative, :in, :in) => 4, (:derivative, :in, :out) => 4, (:derivative, :out, :in) => 4, (:derivative, :out, :out) => 6, (:gradient, :in, :out) => 4, (:gradient, :out, :out) => 4, (:hessian, :in, :out) => 4, (:hessian, :out, :out) => 4, (:hvp, :in, :out) => 4, (:hvp, :out, :out) => 4, (:jacobian, :in, :in) => 10, (:jacobian, :in, :out) => 10, (:jacobian, :out, :in) => 10, (:jacobian, :out, :out) => 10, (:pullback, :in, :in) => 10, (:pullback, :in, :out) => 14, (:pullback, :out, :in) => 14, (:pullback, :out, :out) => 20, (:pushforward, :in, :in) => 14, (:pushforward, :in, :out) => 14, (:pushforward, :out, :in) => 14, (:pushforward, :out, :out) => 20, (:second_derivative, :in, :out) => 4, (:second_derivative, :out, :out) => 6]
 end;
 
 @testset "Coverage of other scenarios" begin

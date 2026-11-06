@@ -7,7 +7,7 @@ using Test
 
 row1 = DIT.DifferentiationBenchmarkDataRow(;
     backend = AutoForwardDiff(),
-    scenario = LegacyScenario{:gradient, :out}(sum, ones(2)),
+    scenario = TripleScenario(@scenario gradient(sum, missing, ones(2)) Result(; order1 = ones(2))),
     operator = :gradient,
     prepared = true,
     calls = 2,

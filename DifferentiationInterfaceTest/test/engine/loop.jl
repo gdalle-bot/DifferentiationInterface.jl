@@ -50,21 +50,6 @@ scens = vcat(
     @test triple_counts == counts
 end
 
-@testset "Mixed with legacy scenarios" begin
-    legacy = DIT.LegacyScenario{:gradient, :out}(f_scalar, x; res1 = 2x)
-    counts_new = count_tests() do
-        test_differentiation(AutoForwardDiff(), scens; logging = false)
-    end
-    counts_legacy = count_tests() do
-        test_differentiation(AutoForwardDiff(), [legacy]; logging = false)
-    end
-    counts_mixed = count_tests() do
-        test_differentiation(AutoForwardDiff(), [legacy, scens...]; logging = false)
-    end
-    @test counts_mixed.failures == 0
-    @test counts_mixed.passes == counts_new.passes + counts_legacy.passes
-end
-
 @testset "Exclusion" begin
     counts_all = count_tests() do
         test_differentiation(AutoForwardDiff(), scens; logging = false)
