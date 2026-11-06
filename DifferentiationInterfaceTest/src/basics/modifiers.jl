@@ -7,7 +7,8 @@ A modifier is a callable struct which transforms scenarios. It only implements t
 - `modify_func(m, f, ref)`: new function, possibly using the primal output of the reference scenario `ref`
 - `modify_contexts(m, contexts, ref)`: new contexts
 - `modify_tangents(m, t)`: new tuple of tangents
-- `modify_output(m, k, x)`: new output of order `k`, applied to reference results and to output buffers
+- `modify_output(m, k, x)`: new output of order `k`, applied to reference results
+- `modify_buffer(m, k, x)`: new buffer for order `k` (the primal output `y` of in-place functions for `k = 0`), unchanged by default since buffers are never read: only modifiers which change their structure need it
 - `name_suffix(m)`: suffix added to the scenario name
 
 When applied to a `TripleScenario`, the function is modified once and shared between the three scenarios, and the contexts of the preparation and flush scenarios are zeroed.
@@ -26,6 +27,7 @@ modify_func(::ScenarioModifier, @nospecialize(f), @nospecialize(::Scenario)) = f
 modify_contexts(::ScenarioModifier, @nospecialize(contexts::Tuple), @nospecialize(::Scenario)) = contexts
 modify_tangents(::ScenarioModifier, t) = t
 modify_output(::ScenarioModifier, k::Integer, x) = x
+modify_buffer(::ScenarioModifier, k::Integer, x) = x
 name_suffix(m::ScenarioModifier) = lowercase(string(nameof(typeof(m))))
 
 function modify_scenario(
@@ -36,10 +38,10 @@ function modify_scenario(
         zero_contexts::Bool,
     )
     op = operator(s)
-    new_value_args = map(y -> modify_output(m, 0, y), value_args(s))
+    new_value_args = map(y -> modify_buffer(m, 0, y), value_args(s))
     new_buffers = if is_inplace(op)
         map(
-            (k, b) -> modify_output(m, k, b),
+            (k, b) -> modify_buffer(m, k, b),
             filter(!iszero, returned_orders(op)),
             output_buffers(s),
         )
@@ -148,6 +150,7 @@ end
 modify_tangents(::Batchify, t::Tuple) = (only(t), -only(t))
 modify_output(::Batchify, k::Integer, x) = x
 modify_output(::Batchify, k::Integer, x::Tuple) = (only(x), -only(x))
+modify_buffer(m::Batchify, k::Integer, x) = modify_output(m, k, x)
 name_suffix(::Batchify) = "batchified"
 
 batchify(s::AnyNewScenario) = Batchify()(s)
