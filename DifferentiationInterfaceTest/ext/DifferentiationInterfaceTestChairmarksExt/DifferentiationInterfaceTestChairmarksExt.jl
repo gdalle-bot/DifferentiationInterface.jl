@@ -58,7 +58,7 @@ using DifferentiationInterface:
 import DifferentiationInterfaceTest as DIT
 using DifferentiationInterfaceTest:
     ALL_OPS,
-    CallCounter, CallsResult, DifferentiationBenchmarkDataRow, DifferentiationBenchmark, Scenario,
+    CallCounter, CallsResult, DifferentiationBenchmarkDataRow, DifferentiationBenchmark, LegacyScenario,
     mysimilar, reset_count!
 using Test: Test, @test
 
@@ -98,7 +98,7 @@ end
 function record!(
         data::DifferentiationBenchmark;
         backend::AbstractADType,
-        scenario::Scenario,
+        scenario::LegacyScenario,
         operator::String,
         prepared::Union{Nothing, Bool},
         bench::Benchmark,

@@ -35,14 +35,14 @@ for op in ALL_OPS
         SecondDerivativePrep
     end
 
-    # narrow T beyond the Scenario-wide `T <: Union{Nothing, NTuple}` bound, else JET
+    # narrow T beyond the LegacyScenario-wide `T <: Union{Nothing, NTuple}` bound, else JET
     # thinks `scen.t` can be `nothing` here and flags a spurious union-split error
     Twithtangents = op in (:pushforward, :pullback, :hvp) ? (NTuple) : (Nothing)
 
-    S1out = Scenario{op, :out, :out, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
-    S1in = Scenario{op, :in, :out, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
-    S2out = Scenario{op, :out, :in, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
-    S2in = Scenario{op, :in, :in, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
+    S1out = LegacyScenario{op, :out, :out, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
+    S1in = LegacyScenario{op, :in, :out, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
+    S2out = LegacyScenario{op, :out, :in, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
+    S2in = LegacyScenario{op, :in, :in, F, X, Y, T} where {F, X, Y, T <: Twithtangents}
 
     if op in [:derivative, :gradient, :jacobian]
         @eval function test_prep(ba::AbstractADType, scen::$S1out)

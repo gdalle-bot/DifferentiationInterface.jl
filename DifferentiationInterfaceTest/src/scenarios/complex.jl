@@ -6,11 +6,11 @@ function complex_holomorphic_gradient_scenarios()
     dy = 1.0
     x = [1.0 + im]
     grad = 2 * conj(x)
-    scens = Scenario[
-        Scenario{:gradient, :out}(square_only, x; res1 = grad),
-        Scenario{:gradient, :in}(square_only, x; res1 = grad),
-        Scenario{:pullback, :out}(square_only, x, (dy,); res1 = (grad,)),
-        Scenario{:pullback, :in}(square_only, x, (dy,); res1 = (grad,)),
+    scens = LegacyScenario[
+        LegacyScenario{:gradient, :out}(square_only, x; res1 = grad),
+        LegacyScenario{:gradient, :in}(square_only, x; res1 = grad),
+        LegacyScenario{:pullback, :out}(square_only, x, (dy,); res1 = (grad,)),
+        LegacyScenario{:pullback, :in}(square_only, x, (dy,); res1 = (grad,)),
     ]
     return scens
 end
@@ -19,11 +19,11 @@ function complex_gradient_scenarios()
     dy = 1.0
     x = [1.0 + im]
     grad = 2 * x
-    scens = Scenario[
-        Scenario{:gradient, :out}(abs2_only, x; res1 = grad),
-        Scenario{:gradient, :in}(abs2_only, x; res1 = grad),
-        Scenario{:pullback, :out}(abs2_only, x, (dy,); res1 = (grad,)),
-        Scenario{:pullback, :in}(abs2_only, x, (dy,); res1 = (grad,)),
+    scens = LegacyScenario[
+        LegacyScenario{:gradient, :out}(abs2_only, x; res1 = grad),
+        LegacyScenario{:gradient, :in}(abs2_only, x; res1 = grad),
+        LegacyScenario{:pullback, :out}(abs2_only, x, (dy,); res1 = (grad,)),
+        LegacyScenario{:pullback, :in}(abs2_only, x, (dy,); res1 = (grad,)),
     ]
     return scens
 end
@@ -31,7 +31,7 @@ end
 """
     complex_scenarios()
 
-Create a vector of first-order [`Scenario`](@ref)s with complex-valued array types and holomorphic functions only.
+Create a vector of first-order [`LegacyScenario`](@ref)s with complex-valued array types and holomorphic functions only.
 """
 function complex_scenarios()
     x_ = 0.42 + im
@@ -65,7 +65,7 @@ end
 """
     complex_sparse_scenarios()
 
-Create a vector of Jacobian [`Scenario`](@ref)s with complex-valued array types and holomorphic functions only.
+Create a vector of Jacobian [`LegacyScenario`](@ref)s with complex-valued array types and holomorphic functions only.
 """
 function complex_sparse_scenarios()
     x_6 = float.(1:6) .+ float.(1:6) .^ 2 .* im
