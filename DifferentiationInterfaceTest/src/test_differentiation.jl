@@ -8,7 +8,7 @@ function sort_key(ts::TripleScenario)
     return (operator_symbol(ts), string(nameof(operator(ts))), string(func(exec_scenario(ts))))
 end
 
-function group_by_operator(scenarios::AbstractVector{<:AnyScenario})
+function group_by_operator(scenarios::AbstractVector{<:TripleScenario})
     return Dict(
         op => filter(s -> operator_symbol(s) == op, scenarios) for
             op in unique(map(operator_symbol, scenarios))
