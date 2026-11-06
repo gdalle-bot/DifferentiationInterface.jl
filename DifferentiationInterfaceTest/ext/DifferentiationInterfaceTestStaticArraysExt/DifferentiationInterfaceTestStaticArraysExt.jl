@@ -58,7 +58,7 @@ function mystatic(scen::DIT.LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op,
 end
 
 function DIT.static_scenarios(args...; kwargs...)
-    scens = DIT.default_scenarios(args...; kwargs...)
+    scens = DIT.legacy_default_scenarios(args...; kwargs...)
     return mystatic.(scens)
 end
 

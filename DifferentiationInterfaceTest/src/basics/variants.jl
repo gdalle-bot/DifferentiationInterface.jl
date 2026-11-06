@@ -15,7 +15,7 @@ supports_inplace_output(_) = false
 
 Return the tuple of output buffers taken by `op`, built from the reference result `r`.
 """
-function make_buffers(op, r::Result)
+function make_buffers(@nospecialize(op), @nospecialize(r::Result))
     is_inplace(op) || return ()
     return map(k -> mysimilar(getorder(r, k)), filter(!iszero, returned_orders(op)))
 end
@@ -27,7 +27,7 @@ Return a scenario identical to `s` but with operator `new_op`, which must be in 
 
 The output buffers are rebuilt from the reference result of `s`.
 """
-function change_operator(s::Scenario, new_op)
+function change_operator(@nospecialize(s::Scenario), @nospecialize(new_op))
     if standard(new_op) !== standard(operator(s))
         throw(ArgumentError("`$new_op` is not in the same family as `$(operator(s))`"))
     end
@@ -46,17 +46,17 @@ function change_operator(s::Scenario, new_op)
     )
 end
 
-with_value(s::Scenario) = change_operator(s, with_value(operator(s)))
-without_value(s::Scenario) = change_operator(s, without_value(operator(s)))
-inplace(s::Scenario) = change_operator(s, inplace(operator(s)))
-outofplace(s::Scenario) = change_operator(s, outofplace(operator(s)))
+with_value(@nospecialize(s::Scenario)) = change_operator(s, with_value(operator(s)))
+without_value(@nospecialize(s::Scenario)) = change_operator(s, without_value(operator(s)))
+inplace(@nospecialize(s::Scenario)) = change_operator(s, inplace(operator(s)))
+outofplace(@nospecialize(s::Scenario)) = change_operator(s, outofplace(operator(s)))
 
 """
     can_be_inplace(s::Scenario)
 
 Return `true` if the outputs of the operator in `s` can be written to buffers.
 """
-function can_be_inplace(s::Scenario)
+function can_be_inplace(@nospecialize(s::Scenario))
     r = result(s)
     isnothing(r) && return false
     orders = filter(!iszero, returned_orders(with_value(operator(s))))
@@ -70,7 +70,7 @@ Return the vector of scenarios with every operator in the family of `s`: with an
 
 The reference result of `s` must contain every differentiation order.
 """
-function all_variants(s::Scenario)
+function all_variants(@nospecialize(s::Scenario))
     std = standard(operator(s))
     ops = can_be_inplace(s) ? (std, inplace(std), with_value(std), inplace(with_value(std))) :
         (std, with_value(std))

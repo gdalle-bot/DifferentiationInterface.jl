@@ -7,7 +7,7 @@ The result is set to `nothing`, since the zeroed scenario is only used for prepa
 The function is shared with `s`, because preparation may be tied to the function object.
 The output buffers are kept, because they are never read and their structure (e.g. a sparsity pattern) may matter.
 """
-function zero_inputs(s::Scenario)
+function zero_inputs(@nospecialize(s::Scenario))
     return Scenario(
         operator(s),
         func(s),
@@ -49,18 +49,18 @@ struct TripleScenario{S1 <: Scenario, S2 <: Scenario, S3 <: Scenario}
     mismatch::Bool
 
     function TripleScenario(
-            exec::S2;
-            prep::S1 = zero_inputs(exec),
-            flush::S3 = zero_inputs(exec),
+            @nospecialize(exec::Scenario);
+            @nospecialize(prep::Scenario = zero_inputs(exec)),
+            @nospecialize(flush::Scenario = zero_inputs(exec)),
             mismatch::Bool = false,
-        ) where {S1 <: Scenario, S2 <: Scenario, S3 <: Scenario}
+        )
         if isnothing(result(exec))
             throw(ArgumentError("The executed scenario must have a reference result"))
         end
         if !(operator(prep) === operator(exec) === operator(flush))
             throw(ArgumentError("The three scenarios must have the same operator"))
         end
-        return new{S1, S2, S3}(prep, exec, flush, mismatch)
+        return new{typeof(prep), typeof(exec), typeof(flush)}(prep, exec, flush, mismatch)
     end
 end
 
