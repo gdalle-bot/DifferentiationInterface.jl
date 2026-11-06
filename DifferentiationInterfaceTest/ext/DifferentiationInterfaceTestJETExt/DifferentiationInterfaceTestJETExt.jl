@@ -55,8 +55,9 @@ using DifferentiationInterface:
     value_gradient_and_hessian!
 using DifferentiationInterfaceTest: ALL_OPS, LegacyScenario, mysimilar
 import DifferentiationInterfaceTest as DIT
-using JET: @test_opt
+using JET: @test_opt, test_opt
 
 include("type_stability_eval.jl")
+include("type_stability.jl")
 
 end

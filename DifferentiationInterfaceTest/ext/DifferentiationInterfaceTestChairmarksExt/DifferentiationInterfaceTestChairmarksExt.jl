@@ -98,7 +98,7 @@ end
 function record!(
         data::DifferentiationBenchmark;
         backend::AbstractADType,
-        scenario::LegacyScenario,
+        scenario::Union{LegacyScenario, DIT.TripleScenario},
         operator::String,
         prepared::Union{Nothing, Bool},
         bench::Benchmark,
@@ -123,5 +123,6 @@ function record!(
 end
 
 include("benchmark_eval.jl")
+include("benchmark.jl")
 
 end
