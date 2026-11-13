@@ -97,10 +97,7 @@ calls = [
         for op in variants
             @test isnothing(DIT.check_result(op, reference))
             new_value_args = map(copy, value_args)
-            buffers = map(
-                k -> DIT.mysimilar(DIT.getorder(reference, k)),
-                DIT.is_inplace(op) ? filter(!iszero, DIT.returned_orders(op)) : (),
-            )
+            buffers = DIT.make_buffers(op, reference)
             @test length(buffers) == DIT.n_buffers(op)
             output = op(f, new_value_args..., buffers..., backend, post...)
             computed = DIT.result_from_output(op, output)

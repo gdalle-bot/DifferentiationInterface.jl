@@ -18,7 +18,7 @@ The arguments are checked against the conventions of DifferentiationInterface:
 
 - `pre_backend_args` contains the primal output `y` (only for in-place functions `f!(y, x)`), followed by the output buffers (only for in-place operators).
 - `post_backend_args` contains the primal input `x`, the tuple of tangents (only for `pushforward`, `pullback` and `hvp`) and the contexts.
-- `result` must contain every differentiation order returned by `operator`, see [`Result`](@ref). It can only be `nothing` for scenarios which are not executed, such as the preparation part of a [`TripleScenario`](@ref).
+- `result` must contain every differentiation order returned by `operator`, see [`Result`](@ref).
 
 # Fields
 
