@@ -24,7 +24,7 @@ end
 Store three scenarios sharing the same operator, to test preparation:
 
 1. `prep`: the scenario on which preparation is performed;
-2. `exec`: the scenario which is executed and compared to its reference result, before and after the flush;
+2. `exec`: the scenario which is executed (and compared to its reference result, if any), before and after the flush;
 3. `flush`: the scenario executed in between, to check that preparation does not keep stale state.
 
 If `mismatch` is `true`, preparing on `prep` and executing on `exec` must throw a `DifferentiationInterface.PreparationMismatchError`.
@@ -41,7 +41,7 @@ $(TYPEDFIELDS)
 struct TripleScenario{S1 <: Scenario, S2 <: Scenario, S3 <: Scenario}
     "scenario used for preparation"
     prep::S1
-    "scenario executed and compared to its reference result"
+    "scenario executed (and compared to its reference result, if any)"
     exec::S2
     "scenario executed between two executions of `exec`"
     flush::S3
@@ -54,9 +54,6 @@ struct TripleScenario{S1 <: Scenario, S2 <: Scenario, S3 <: Scenario}
             @nospecialize(flush::Scenario = zero_inputs(exec)),
             mismatch::Bool = false,
         )
-        if isnothing(result(exec))
-            throw(ArgumentError("The executed scenario must have a reference result"))
-        end
         if !(operator(prep) === operator(exec) === operator(flush))
             throw(ArgumentError("The three scenarios must have the same operator"))
         end
@@ -87,29 +84,20 @@ Return `true` if the primal input or the primal output of the preparation scenar
 """
 function should_reprepare(ts::TripleScenario)
     prep, exec = prep_scenario(ts), exec_scenario(ts)
-    x_prep, x_exec = primal_input(prep), primal_input(exec)
-    y_prep, y_exec = map(mysize, value_args(prep)), map(mysize, value_args(exec))
-    return !isequal(mysize(x_prep), mysize(x_exec)) || !isequal(y_prep, y_exec)
+    xsize_prep, xsize_exec = mysize(primal_input(prep)), mysize(primal_input(exec))
+    ysizes_prep, ysizes_exec = map(mysize, value_args(prep)), map(mysize, value_args(exec))
+    return !isequal(xsize_prep, xsize_exec) || !isequal(ysizes_prep, ysizes_exec)
 end
 
 """
     adapt_batchsize(backend, ts::TripleScenario)
 
-Cap the batch size of `backend` (if it has one) so that it does not exceed the input or output dimensions of `ts`.
+Cap the batch size of `backend` (if it has one) so that it does not exceed the lengths of the array inputs and known array outputs of `ts`.
 """
 function adapt_batchsize(backend::AbstractADType, ts::TripleScenario)
     prep, exec = prep_scenario(ts), exec_scenario(ts)
-    x_prep, x_exec = primal_input(prep), primal_input(exec)
-    y_exec = primal_output(exec)
-    y_prep = has_inplace_function(prep) ? primal_output(prep) : y_exec
-    Bmax = if x_exec isa AbstractArray && y_exec isa AbstractArray
-        min(length(x_exec), length(y_exec), length(x_prep), length(y_prep))
-    elseif x_exec isa AbstractArray
-        min(length(x_exec), length(x_prep))
-    elseif y_exec isa AbstractArray
-        min(length(y_exec), length(y_prep))
-    else
-        typemax(Int)
-    end
+    # primal outputs are `nothing` when unknown
+    primals = (primal_input(prep), primal_input(exec), primal_output(prep), primal_output(exec))
+    Bmax = minimum(length, Iterators.filter(p -> p isa AbstractArray, primals); init = typemax(Int))
     return DI.threshold_batchsize(backend, Bmax)
 end
