@@ -77,7 +77,8 @@ canonical_scenarios = [
     ),
 ]
 
-all_scenarios = mapreduce(DIT.all_variants, vcat, canonical_scenarios)
+# all outputs are arrays
+all_scenarios = mapreduce(s -> DIT.all_variants(s; include_inplace = true), vcat, canonical_scenarios)
 
 n_candidates(op) = DIT.needs_tangent(op) ? 4 : 3
 
