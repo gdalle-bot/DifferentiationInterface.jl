@@ -93,16 +93,15 @@ calls = [
         reference = DIT.result_from_output(
             val_op, val_op(f, map(copy, value_args)..., backend, post...)
         )
-        for op in DIT.ALL_OPERATORS
-            DIT.standard(op) === std || continue
+        variants = (std, DIT.with_value(std), DIT.inplace(std), DIT.with_value(DIT.inplace(std)))
+        for op in variants
             @test isnothing(DIT.check_result(op, reference))
             new_value_args = map(copy, value_args)
             buffers = map(
                 k -> DIT.mysimilar(DIT.getorder(reference, k)),
-                filter(!iszero, DIT.returned_orders(op)),
+                DIT.is_inplace(op) ? filter(!iszero, DIT.returned_orders(op)) : (),
             )
-            @test length(buffers) == DIT.n_buffers(op) || !DIT.is_inplace(op)
-            buffers = DIT.is_inplace(op) ? buffers : ()
+            @test length(buffers) == DIT.n_buffers(op)
             output = op(f, new_value_args..., buffers..., backend, post...)
             computed = DIT.result_from_output(op, output)
             DIT.test_approx(op, computed, reference; isapprox, atol = 0, rtol = 1.0e-10)
