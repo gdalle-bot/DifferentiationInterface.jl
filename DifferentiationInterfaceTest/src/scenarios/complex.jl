@@ -4,8 +4,8 @@ abs2_only(x::AbstractVector) = abs2(only(x))
 function complex_gradient_canonical(f, x::AbstractVector; grad)
     dy = 1.0
     return [
-        canonical_scenario(value_and_gradient, f, x; res1 = grad),
-        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (grad,)),
+        canonical_scenario(value_and_gradient, f, x; res1 = grad) => true,
+        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (grad,)) => true,
     ]
 end
 
@@ -50,8 +50,8 @@ function complex_scenarios(; include_mismatched = true)
         complex_gradient_scenarios(),
         complex_holomorphic_gradient_scenarios(),
     )
-    canonical = filter(s -> order(operator(s)) == 1, canonical)
-    scens = TripleScenario[TripleScenario(v) for s in canonical for v in all_variants(s)]
+    canonical = filter(p -> order(operator(first(p))) == 1, canonical)
+    scens = TripleScenario[TripleScenario(v) for p in canonical for v in tagged_variants(p)]
     include_mismatched && add_mismatched!(scens)
     return scens
 end
