@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios ([#1](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/1))
+- **Breaking:** `default_scenarios` returns call-based `TripleScenario`s, with one scenario per operator variant, and new keyword arguments `include_mismatched=true` (preparation mismatch scenarios) and `modifiers=()`
 - Test `value_gradient_and_hvp(!)` instead of the deprecated `gradient_and_hvp(!)`, which requires DifferentiationInterface v0.7.22 ([#1086](https://github.com/JuliaDiff/DifferentiationInterface.jl/pull/1086))
 
 ## [0.11.0](https://github.com/JuliaDiff/DifferentiationInterface.jl/compare/DifferentiationInterfaceTest-v0.10.4...DifferentiationInterfaceTest-v0.11.0)
