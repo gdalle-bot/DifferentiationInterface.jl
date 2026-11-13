@@ -13,10 +13,10 @@ for op in ALL_OPS
     val_and_op! = Symbol(val_prefix, op!)
     prep_op = Symbol("prepare_", op)
 
-    S1out = Scenario{op, :out, :out}
-    S1in = Scenario{op, :in, :out}
-    S2out = Scenario{op, :out, :in}
-    S2in = Scenario{op, :in, :in}
+    S1out = LegacyScenario{op, :out, :out}
+    S1in = LegacyScenario{op, :in, :out}
+    S2out = LegacyScenario{op, :out, :in}
+    S2in = LegacyScenario{op, :in, :in}
 
     @eval function DIT.run_benchmark!(
             data::DifferentiationBenchmark,

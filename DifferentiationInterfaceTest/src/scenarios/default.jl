@@ -26,11 +26,11 @@ function num_to_num_scenarios(x::Number; dx::Number, dy::Number)
     der2 = num_to_num_second_derivative(x)
 
     # everyone out of place
-    scens = Scenario[
-        Scenario{:pushforward, :out}(f, x, (dx,); res1 = (dy_from_dx,)),
-        Scenario{:pullback, :out}(f, x, (dy,); res1 = (dx_from_dy,)),
-        Scenario{:derivative, :out}(f, x; res1 = der),
-        Scenario{:second_derivative, :out}(f, x; res1 = der, res2 = der2),
+    scens = LegacyScenario[
+        LegacyScenario{:pushforward, :out}(f, x, (dx,); res1 = (dy_from_dx,)),
+        LegacyScenario{:pullback, :out}(f, x, (dy,); res1 = (dx_from_dy,)),
+        LegacyScenario{:derivative, :out}(f, x; res1 = der),
+        LegacyScenario{:second_derivative, :out}(f, x; res1 = der, res2 = der2),
     ]
     return scens
 end
@@ -51,18 +51,18 @@ function onevec_to_onevec_scenarios_onearg(x::Number; dx::Number, dy::Number)
 
     jac = fill(der, 1, 1)
 
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(
+                LegacyScenario{:pushforward, pl_op}(
                     onevec_to_onevec, [x], ([dx],); res1 = ([dy_from_dx],)
                 ),
-                Scenario{:pullback, pl_op}(
+                LegacyScenario{:pullback, pl_op}(
                     onevec_to_onevec, [x], ([dy],); res1 = ([dx_from_dy],)
                 ),
-                Scenario{:jacobian, pl_op}(onevec_to_onevec, [x]; res1 = jac),
+                LegacyScenario{:jacobian, pl_op}(onevec_to_onevec, [x]; res1 = jac),
             ],
         )
     end
@@ -79,18 +79,18 @@ function onevec_to_onevec_scenarios_twoarg(x::Number; dx::Number, dy::Number)
 
     jac = fill(der, 1, 1)
 
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(
+                LegacyScenario{:pushforward, pl_op}(
                     onevec_to_onevec!, [y], [x], ([dx],); res1 = ([dy_from_dx],)
                 ),
-                Scenario{:pullback, pl_op}(
+                LegacyScenario{:pullback, pl_op}(
                     onevec_to_onevec!, [y], [x], ([dy],); res1 = ([dx_from_dy],)
                 ),
-                Scenario{:jacobian, pl_op}(onevec_to_onevec!, [y], [x]; res1 = jac),
+                LegacyScenario{:jacobian, pl_op}(onevec_to_onevec!, [y], [x]; res1 = jac),
             ],
         )
     end
@@ -132,19 +132,19 @@ function num_to_vec_scenarios_onearg(x::Number; dx::Number, dy::AbstractArray)
     der2 = num_to_vec_second_derivative(x)
 
     # pullback stays out of place
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
-                Scenario{:derivative, pl_op}(f, x; res1 = der),
-                Scenario{:second_derivative, pl_op}(f, x; res1 = der, res2 = der2),
+                LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
+                LegacyScenario{:derivative, pl_op}(f, x; res1 = der),
+                LegacyScenario{:second_derivative, pl_op}(f, x; res1 = der, res2 = der2),
             ],
         )
     end
     for pl_op in (:out,)
-        append!(scens, [Scenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,))])
+        append!(scens, [LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,))])
     end
     return scens
 end
@@ -158,18 +158,18 @@ function num_to_vec_scenarios_twoarg(x::Number; dx::Number, dy::AbstractArray)
     der = num_to_vec!_derivative(x; y)
 
     # pullback stays out of place
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-                Scenario{:derivative, pl_op}(f!, y, x; res1 = der),
+                LegacyScenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
+                LegacyScenario{:derivative, pl_op}(f!, y, x; res1 = der),
             ],
         )
     end
     for pl_op in (:out,)
-        append!(scens, [Scenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,))])
+        append!(scens, [LegacyScenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,))])
     end
     return scens
 end
@@ -218,19 +218,19 @@ function num_to_mat_scenarios_onearg(x::Number; dx::Number, dy::AbstractArray)
     der2 = num_to_mat_second_derivative(x)
 
     # pullback stays out of place
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
-                Scenario{:derivative, pl_op}(f, x; res1 = der),
-                Scenario{:second_derivative, pl_op}(f, x; res1 = der, res2 = der2),
+                LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
+                LegacyScenario{:derivative, pl_op}(f, x; res1 = der),
+                LegacyScenario{:second_derivative, pl_op}(f, x; res1 = der, res2 = der2),
             ],
         )
     end
     for pl_op in (:out,)
-        append!(scens, [Scenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,))])
+        append!(scens, [LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,))])
     end
     return scens
 end
@@ -244,18 +244,18 @@ function num_to_mat_scenarios_twoarg(x::Number; dx::Number, dy::AbstractArray)
     der = num_to_mat!_derivative(x; y)
 
     # pullback stays out of place
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-                Scenario{:derivative, pl_op}(f!, y, x; res1 = der),
+                LegacyScenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
+                LegacyScenario{:derivative, pl_op}(f!, y, x; res1 = der),
             ],
         )
     end
     for pl_op in (:out,)
-        append!(scens, [Scenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,))])
+        append!(scens, [LegacyScenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,))])
     end
     return scens
 end
@@ -321,20 +321,20 @@ function arr_to_num_scenarios_onearg(
     hess = arr_to_num_hessian(x)
 
     # pushforward stays out of place
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
-                Scenario{:gradient, pl_op}(f, x; res1 = grad),
-                Scenario{:hvp, pl_op}(f, x, (dx,); res1 = grad, res2 = (dg,)),
-                Scenario{:hessian, pl_op}(f, x; res1 = grad, res2 = hess),
+                LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
+                LegacyScenario{:gradient, pl_op}(f, x; res1 = grad),
+                LegacyScenario{:hvp, pl_op}(f, x, (dx,); res1 = grad, res2 = (dg,)),
+                LegacyScenario{:hessian, pl_op}(f, x; res1 = grad, res2 = hess),
             ],
         )
     end
     for pl_op in (:out,)
-        append!(scens, [Scenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,))])
+        append!(scens, [LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,))])
     end
     return scens
 end
@@ -342,14 +342,14 @@ end
 ## Array to array
 
 function all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
-                Scenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
-                Scenario{:jacobian, pl_op}(f, x; res1 = jac),
+                LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
+                LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
+                LegacyScenario{:jacobian, pl_op}(f, x; res1 = jac),
             ],
         )
     end
@@ -357,14 +357,14 @@ function all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
 end
 
 function all_array_to_array_scenarios(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-    scens = Scenario[]
+    scens = LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                Scenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-                Scenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,)),
-                Scenario{:jacobian, pl_op}(f!, y, x; res1 = jac),
+                LegacyScenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
+                LegacyScenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,)),
+                LegacyScenario{:jacobian, pl_op}(f!, y, x; res1 = jac),
             ],
         )
     end
@@ -546,7 +546,7 @@ end
 """
     default_scenarios()
 
-Create a vector of [`Scenario`](@ref)s with standard array types.
+Create a vector of [`LegacyScenario`](@ref)s with standard array types.
 """
 function default_scenarios(;
         linalg = true,
@@ -625,7 +625,7 @@ function default_scenarios(;
     )
 
     scens_smaller_prep = map(scens, smallerscens) do s1, s2
-        Scenario{operator(s1), operator_place(s1), function_place(s1)}(;
+        LegacyScenario{operator(s1), operator_place(s1), function_place(s1)}(;
             f = s1.f,
             y = s1.y,
             x = s1.x,
@@ -640,7 +640,7 @@ function default_scenarios(;
 
     include_batchified && append!(scens, batchify(scens))
 
-    final_scens = Scenario[]
+    final_scens = LegacyScenario[]
     include_normal && append!(final_scens, scens)
     include_closurified && append!(final_scens, closurify(scens))
     include_constantified && append!(final_scens, constantify(scens))

@@ -40,10 +40,10 @@ for op in ALL_OPS
         SecondDerivativePrep
     end
 
-    S1out = Scenario{op, :out, :out}
-    S1in = Scenario{op, :in, :out}
-    S2out = Scenario{op, :out, :in}
-    S2in = Scenario{op, :in, :in}
+    S1out = LegacyScenario{op, :out, :out}
+    S1in = LegacyScenario{op, :in, :out}
+    S2out = LegacyScenario{op, :out, :in}
+    S2in = LegacyScenario{op, :in, :in}
 
     if op in [:derivative, :gradient, :jacobian]
         @eval function test_correctness(
