@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`)
+- Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`) ([#3](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/3), [#4](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/4))
 - Generic correctness engine for call-based scenarios: every preparation candidate (none, strict, non-strict, same point), two executions separated by a flush call, automatic sparsity pattern check for sparse backends, preparation mismatch scenarios
 
 ### Changed
 
-- **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios
+- **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios ([#1](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/1))
 - Test `value_gradient_and_hvp(!)` instead of the deprecated `gradient_and_hvp(!)`, which requires DifferentiationInterface v0.7.22 ([#1086](https://github.com/JuliaDiff/DifferentiationInterface.jl/pull/1086))
 
 ## [0.11.0](https://github.com/JuliaDiff/DifferentiationInterface.jl/compare/DifferentiationInterfaceTest-v0.10.4...DifferentiationInterfaceTest-v0.11.0)

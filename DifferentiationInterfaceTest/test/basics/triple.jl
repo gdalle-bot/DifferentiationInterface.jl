@@ -65,7 +65,8 @@ end
 
 @testset "Validation" begin
     x = [1.0, 2.0]
-    @test_throws ArgumentError TripleScenario(@scenario gradient(sum, missing, x))
+    # no reference result is needed, e.g. for benchmarks
+    @test TripleScenario(@scenario gradient(sum, missing, x)) isa TripleScenario
     exec = @scenario gradient(sum, missing, x) Result(; order1 = [1.0, 1.0])
     @test_throws ArgumentError TripleScenario(
         exec; prep = @scenario value_and_gradient(sum, missing, x)
