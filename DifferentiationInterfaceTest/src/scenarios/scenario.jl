@@ -187,12 +187,6 @@ function compatible(backend::AbstractADType, scen::LegacyScenario)
         mixedmode_compatible
 end
 
-function group_by_operator(scenarios::AbstractVector{<:LegacyScenario})
-    return Dict(
-        op => filter(s -> operator(s) == op, scenarios) for
-            op in unique(operator.(scenarios))
-    )
-end
 
 function Base.show(
         io::IO, scen::LegacyScenario{op, pl_op, pl_fun, F, X, Y, T}

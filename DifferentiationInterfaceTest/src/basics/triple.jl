@@ -1,16 +1,17 @@
 """
     zero_inputs(s::Scenario)
 
-Return a scenario with the same operator and function as `s`, where every argument is replaced by its [`custom_zero`](@ref).
+Return a scenario with the same operator and function as `s`, where every argument except the output buffers is replaced by its [`custom_zero`](@ref).
 
 The result is set to `nothing`, since the zeroed scenario is only used for preparation and flushing.
 The function is shared with `s`, because preparation may be tied to the function object.
+The output buffers are kept, because they are never read and their structure (e.g. a sparsity pattern) may matter.
 """
 function zero_inputs(s::Scenario)
     return Scenario(
         operator(s),
         func(s),
-        map(custom_zero, pre_backend_args(s)),
+        (map(custom_zero, value_args(s))..., output_buffers(s)...),
         map(custom_zero, post_backend_args(s));
         result = nothing,
         name = nothing,
