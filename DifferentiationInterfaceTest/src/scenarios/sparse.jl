@@ -26,13 +26,13 @@ end
 function sparse_jacobian_canonical(f, f!, x; jac)
     y = f(x)
     return [
-        canonical_scenario(value_and_jacobian, f, x; res1 = jac),
-        canonical_scenario!(value_and_jacobian, f!, y, x; res1 = jac),
+        canonical_scenario(value_and_jacobian, f, x; res1 = jac) => true,
+        canonical_scenario!(value_and_jacobian, f!, y, x; res1 = jac) => true,
     ]
 end
 
 function sparse_triples(canonical::AbstractVector, x_prep)
-    return TripleScenario[with_prep_input(v, x_prep) for s in canonical for v in all_variants(s)]
+    return TripleScenario[with_prep_input(v, x_prep) for p in canonical for v in tagged_variants(p)]
 end
 
 ## Vector to vector
@@ -166,7 +166,7 @@ function sparse_vec_to_num_scenarios(x::AbstractVector)
         value_gradient_and_hessian, sumdiffcube, x;
         res1 = sumdiffcube_gradient(x), res2 = sumdiffcube_hessian(x),
     )
-    return sparse_triples([canonical], sparse_prep_input(x))
+    return sparse_triples([canonical => true], sparse_prep_input(x))
 end
 
 ## Matrix to scalar
@@ -186,7 +186,7 @@ function sparse_mat_to_num_scenarios(x::AbstractMatrix)
         value_gradient_and_hessian, sumdiffcube_mat, x;
         res1 = sumdiffcube_mat_gradient(x), res2 = sumdiffcube_mat_hessian(x),
     )
-    return sparse_triples([canonical], sparse_prep_input(x))
+    return sparse_triples([canonical => true], sparse_prep_input(x))
 end
 
 ## Various matrices
@@ -280,7 +280,7 @@ function squarequadraticform_scenarios(x::AbstractVector, band_sizes)
             res1 = squarequadraticform_gradient(x, A),
             res2 = sparse(squarequadraticform_hessian(x, A)),
         )
-        append!(scens, sparse_triples([canonical], sparse_prep_input(x)))
+        append!(scens, sparse_triples([canonical => true], sparse_prep_input(x)))
     end
     return scens
 end
