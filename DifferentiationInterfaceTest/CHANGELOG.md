@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`) ([#3](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/3), [#4](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/4))
 - `test_differentiation` accepts call-based scenarios, possibly mixed with legacy ones
 - Type stability (JET), allocation (AllocCheck) and benchmark (Chairmarks) checks for call-based scenarios
+- Hook-based scenario modifiers for call-based scenarios (`zero_der`, `batchify`, `closurify`, `constantify`, `cachify`, `constantorcachify`, `change_function`, `mismatch`, `compute_results`)
 - Generic correctness engine for call-based scenarios: every preparation candidate (none, strict, non-strict, same point), two executions separated by a flush call, automatic sparsity pattern check for sparse backends, preparation mismatch scenarios
 
 ### Changed

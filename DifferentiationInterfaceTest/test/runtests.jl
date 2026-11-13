@@ -41,6 +41,7 @@ LOGGING = get(ENV, "CI", "false") == "false"
             include("basics/scenario.jl")
             include("basics/triple.jl")
             include("basics/variants.jl")
+            include("basics/modifiers.jl")
         end
     end
 
