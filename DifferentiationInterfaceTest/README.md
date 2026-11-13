@@ -18,7 +18,7 @@ Make it easy to know, for a given function:
 
 ## Features
 
-- Definition of custom test scenarios
+- Definition of custom test scenarios, written as the operator calls they test
 - Correctness tests
 - Type stability tests
 - Count calls to the function
