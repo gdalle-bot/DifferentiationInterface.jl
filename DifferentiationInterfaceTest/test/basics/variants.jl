@@ -38,7 +38,9 @@ canonical_scenarios = [
         @test DIT.result(v) === DIT.result(s)
         @test DIT.func(v) === DIT.func(s)
         @test DIT.post_backend_args(v) === DIT.post_backend_args(s)
-        @test DIT.value_args(v) === DIT.value_args(s)
+        # the primal output of in-place functions is copied
+        @test DIT.value_args(v) == DIT.value_args(s)
+        @test all(map(!==, DIT.value_args(v), DIT.value_args(s)))
         @test length(DIT.output_buffers(v)) == DIT.n_buffers(DIT.operator(v))
         # the variant can actually be executed
         op = DIT.operator(v)
@@ -58,6 +60,13 @@ end
     @test length(DIT.output_buffers(DIT.without_value(DIT.inplace(s)))) == 1
     @test DIT.operator(DIT.with_value(DIT.outofplace(DIT.inplace(s)))) ===
         value_gradient_and_hessian
+end
+
+@testset "In-place outputs" begin
+    @test DIT.supports_inplace_output([1.0, 2.0])
+    @test DIT.supports_inplace_output(([1.0], [2.0;;]))
+    @test !DIT.supports_inplace_output(1.0)
+    @test !DIT.supports_inplace_output(([1.0], 2.0))
 end
 
 @testset "Errors" begin
