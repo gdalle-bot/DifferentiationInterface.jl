@@ -21,7 +21,10 @@ benchmark_differentiation
 ## Call-based scenarios
 
 ```@docs
+Scenario
+@scenario
 Result
+TripleScenario
 custom_zero
 ```
 
