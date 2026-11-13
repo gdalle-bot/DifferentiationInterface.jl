@@ -30,10 +30,12 @@ ADTypes.mode(::FakeBackend) = ADTypes.ForwardMode()
 x = [1.0, 2.0]
 
 stable_scens = DIT.all_variants(
-    @scenario value_and_gradient(f_scalar, missing, x) Result(5.0, 2x, nothing)
+    @scenario(value_and_gradient(f_scalar, missing, x), Result(5.0, 2x, nothing));
+    include_inplace = true,
 )
 unstable_scens = DIT.all_variants(
-    @scenario value_and_gradient(f_unstable, missing, x) Result(5.0, 2x, nothing)
+    @scenario(value_and_gradient(f_unstable, missing, x), Result(5.0, 2x, nothing));
+    include_inplace = true,
 )
 
 # type stability checks are disabled on Julia >= 1.12 in the rest of the test suite
