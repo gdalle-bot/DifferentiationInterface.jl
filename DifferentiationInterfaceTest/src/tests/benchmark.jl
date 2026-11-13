@@ -44,7 +44,7 @@ Base.@kwdef struct DifferentiationBenchmarkDataRow{T}
     "backend used for benchmarking"
     backend::AbstractADType
     "scenario used for benchmarking"
-    scenario::Scenario
+    scenario::LegacyScenario
     "differentiation operator used for benchmarking, e.g. `:gradient` or `:hessian`"
     operator::Symbol
     "whether the operator had been prepared"

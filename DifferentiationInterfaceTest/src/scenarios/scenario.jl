@@ -1,5 +1,5 @@
 """
-    Scenario{op,pl_op,pl_fun}
+    LegacyScenario{op,pl_op,pl_fun}
 
 Store a testing scenario composed of a function and its input + output for a given operator.
 
@@ -13,12 +13,12 @@ This generic type should never be used directly: use the specific constructor co
 
 # Constructors
 
-    Scenario{op,pl_op}(
+    LegacyScenario{op,pl_op}(
         f, x, [t], contexts...;
         prep_args, res1, res2, name
     )
 
-    Scenario{op,pl_op}(
+    LegacyScenario{op,pl_op}(
         f!, y, x, [t,] contexts...;
         prep_args, res1, res2, name
     )
@@ -33,7 +33,7 @@ Default values:
 
 $(TYPEDFIELDS)
 """
-struct Scenario{op, pl_op, pl_fun, F, X, Y, T <: Union{Nothing, NTuple}, C <: Tuple, R1, R2, P <: NamedTuple}
+struct LegacyScenario{op, pl_op, pl_fun, F, X, Y, T <: Union{Nothing, NTuple}, C <: Tuple, R1, R2, P <: NamedTuple}
     "function `f` (if `pl_fun==:out`) or `f!` (if `pl_fun==:in`) to apply"
     f::F
     "primal output"
@@ -53,7 +53,7 @@ struct Scenario{op, pl_op, pl_fun, F, X, Y, T <: Union{Nothing, NTuple}, C <: Tu
     "name of the scenario for display in test sets and dataframes"
     name::Union{String, Nothing}
 
-    function Scenario{op, pl_op, pl_fun}(;
+    function LegacyScenario{op, pl_op, pl_fun}(;
             f::F,
             y::Y,
             x::X,
@@ -78,7 +78,7 @@ function zero_contexts(contexts...)
     return rewrap(map(zero ∘ unwrap, contexts)...)
 end
 
-function Scenario{op, pl_op}(
+function LegacyScenario{op, pl_op}(
         f,
         x,
         contexts::Vararg{Context};
@@ -88,12 +88,12 @@ function Scenario{op, pl_op}(
         name = nothing,
     ) where {op, pl_op}
     y = f(x, map(unwrap, contexts)...)
-    return Scenario{op, pl_op, :out}(;
+    return LegacyScenario{op, pl_op, :out}(;
         f, y, x, t = nothing, contexts, res1, res2, prep_args, name
     )
 end
 
-function Scenario{op, pl_op}(
+function LegacyScenario{op, pl_op}(
         f,
         y,
         x,
@@ -104,12 +104,12 @@ function Scenario{op, pl_op}(
         name = nothing,
     ) where {op, pl_op}
     f(y, x, map(unwrap, contexts)...)
-    return Scenario{op, pl_op, :in}(;
+    return LegacyScenario{op, pl_op, :in}(;
         f, y, x, t = nothing, contexts, res1, res2, prep_args, name
     )
 end
 
-function Scenario{op, pl_op}(
+function LegacyScenario{op, pl_op}(
         f,
         x,
         t::NTuple,
@@ -120,10 +120,10 @@ function Scenario{op, pl_op}(
         name = nothing,
     ) where {op, pl_op}
     y = f(x, map(unwrap, contexts)...)
-    return Scenario{op, pl_op, :out}(; f, y, x, t, contexts, res1, res2, prep_args, name)
+    return LegacyScenario{op, pl_op, :out}(; f, y, x, t, contexts, res1, res2, prep_args, name)
 end
 
-function Scenario{op, pl_op}(
+function LegacyScenario{op, pl_op}(
         f,
         y,
         x,
@@ -135,13 +135,13 @@ function Scenario{op, pl_op}(
         name = nothing,
     ) where {op, pl_op}
     f(y, x, map(unwrap, contexts)...)
-    return Scenario{op, pl_op, :in}(; f, y, x, t, contexts, res1, res2, prep_args, name)
+    return LegacyScenario{op, pl_op, :in}(; f, y, x, t, contexts, res1, res2, prep_args, name)
 end
 
-Base.:(==)(scen1::Scenario, scen2::Scenario) = false
+Base.:(==)(scen1::LegacyScenario, scen2::LegacyScenario) = false
 
 function Base.:(==)(
-        scen1::Scenario{op, pl_op, pl_fun}, scen2::Scenario{op, pl_op, pl_fun}
+        scen1::LegacyScenario{op, pl_op, pl_fun}, scen2::LegacyScenario{op, pl_op, pl_fun}
     ) where {op, pl_op, pl_fun}
     eq_f = scen1.f == scen2.f
     eq_x = scen1.x == scen2.x
@@ -162,11 +162,11 @@ function Base.:(==)(
     return (eq_x && eq_y && eq_t && eq_contexts && eq_res1 && eq_res2 && eq_name)
 end
 
-operator(::Scenario{op}) where {op} = op
-operator_place(::Scenario{op, pl_op}) where {op, pl_op} = pl_op
-function_place(::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun} = pl_fun
+operator(::LegacyScenario{op}) where {op} = op
+operator_place(::LegacyScenario{op, pl_op}) where {op, pl_op} = pl_op
+function_place(::LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun} = pl_fun
 
-function order(scen::Scenario)
+function order(scen::LegacyScenario)
     if operator(scen) in [:pushforward, :pullback, :derivative, :gradient, :jacobian]
         return 1
     elseif operator(scen) in [:hvp, :hessian, :second_derivative]
@@ -174,7 +174,7 @@ function order(scen::Scenario)
     end
 end
 
-function compatible(backend::AbstractADType, scen::Scenario)
+function compatible(backend::AbstractADType, scen::LegacyScenario)
     place_compatible = function_place(scen) == :out || Bool(inplace_support(backend))
     sparse_compatible = operator(scen) in (:jacobian, :hessian) || !isa(backend, AutoSparse)
     secondorder_compatible =
@@ -187,7 +187,7 @@ function compatible(backend::AbstractADType, scen::Scenario)
         mixedmode_compatible
 end
 
-function group_by_operator(scenarios::AbstractVector{<:Scenario})
+function group_by_operator(scenarios::AbstractVector{<:LegacyScenario})
     return Dict(
         op => filter(s -> operator(s) == op, scenarios) for
             op in unique(operator.(scenarios))
@@ -195,10 +195,10 @@ function group_by_operator(scenarios::AbstractVector{<:Scenario})
 end
 
 function Base.show(
-        io::IO, scen::Scenario{op, pl_op, pl_fun, F, X, Y, T}
+        io::IO, scen::LegacyScenario{op, pl_op, pl_fun, F, X, Y, T}
     ) where {op, pl_op, pl_fun, F, X, Y, T}
     if isnothing(scen.name)
-        print(io, "Scenario{$(repr(op)),$(repr(pl_op))} $(string(scen.f)) : $X -> $Y")
+        print(io, "LegacyScenario{$(repr(op)),$(repr(pl_op))} $(string(scen.f)) : $X -> $Y")
         if op in (:pushforward, :pullback, :hvp)
             print(io, " ($(length(scen.t)) tangents)")
         end
@@ -211,7 +211,7 @@ function Base.show(
     return nothing
 end
 
-function adapt_batchsize(backend::AbstractADType, scen::Scenario)
+function adapt_batchsize(backend::AbstractADType, scen::LegacyScenario)
     (; x, y, prep_args) = scen
     xprep = prep_args.x
     yprep = hasproperty(prep_args, :y) ? prep_args.y : y
@@ -227,6 +227,6 @@ function adapt_batchsize(backend::AbstractADType, scen::Scenario)
     return DI.threshold_batchsize(backend, Bmax)
 end
 
-function no_matrices(scens::AbstractVector{<:Scenario})
+function no_matrices(scens::AbstractVector{<:LegacyScenario})
     return filter(s -> !isa(s.x, AbstractMatrix) && !isa(s.y, AbstractMatrix), scens)
 end

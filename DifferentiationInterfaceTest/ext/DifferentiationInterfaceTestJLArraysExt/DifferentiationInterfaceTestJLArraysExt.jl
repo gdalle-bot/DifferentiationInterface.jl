@@ -23,9 +23,9 @@ myjl(x::DI.Cache{<:AbstractArray}) = DI.Cache(myjl(DI.unwrap(x)))
 myjl(x::DI.Cache{<:Union{Tuple, NamedTuple}}) = map(myjl, map(DI.Cache, DI.unwrap(x)))
 myjl(::Nothing) = nothing
 
-function myjl(scen::DIT.Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function myjl(scen::DIT.LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     (; f, x, y, t, contexts, prep_args, res1, res2, name) = scen
-    return DIT.Scenario{op, pl_op, pl_fun}(;
+    return DIT.LegacyScenario{op, pl_op, pl_fun}(;
         f = myjl(f),
         x = myjl(x),
         y = myjl(y),

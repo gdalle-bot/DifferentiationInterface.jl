@@ -1,11 +1,11 @@
 abstract type FunctionModifier end
 
 """
-    zero(scen::Scenario)
+    zero(scen::LegacyScenario)
 
-Return a new `Scenario` identical to `scen` except for the first- and second-order results which are set to zero.
+Return a new `LegacyScenario` identical to `scen` except for the first- and second-order results which are set to zero.
 """
-function Base.zero(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function Base.zero(scen::LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     zero_res1 = if op in (:pushforward, :pullback)
         map(zero, scen.res1)
     else
@@ -18,7 +18,7 @@ function Base.zero(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     else
         zero(scen.res2)
     end
-    return Scenario{op, pl_op, pl_fun}(;
+    return LegacyScenario{op, pl_op, pl_fun}(;
         f = scen.f,
         x = scen.x,
         y = scen.y,
@@ -32,12 +32,12 @@ function Base.zero(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
 end
 
 """
-    change_function(scen::Scenario, new_f)
+    change_function(scen::LegacyScenario, new_f)
 
-Return a new `Scenario` identical to `scen` except for the function `f` which is changed to `new_f`.
+Return a new `LegacyScenario` identical to `scen` except for the function `f` which is changed to `new_f`.
 """
-function change_function(scen::Scenario{op, pl_op, pl_fun}, new_f) where {op, pl_op, pl_fun}
-    return Scenario{op, pl_op, pl_fun}(;
+function change_function(scen::LegacyScenario{op, pl_op, pl_fun}, new_f) where {op, pl_op, pl_fun}
+    return LegacyScenario{op, pl_op, pl_fun}(;
         f = new_f,
         x = scen.x,
         y = scen.y,
@@ -53,13 +53,13 @@ end
 same_function(scen) = change_function(scen, scen.f)
 
 """
-    batchify(scen::Scenario)
+    batchify(scen::LegacyScenario)
 
-Return a new `Scenario` identical to `scen` except for the tangents `tang` and associated results `res1` / `res2`, which are duplicated (batch mode).
+Return a new `LegacyScenario` identical to `scen` except for the tangents `tang` and associated results `res1` / `res2`, which are duplicated (batch mode).
 
 Only works if `scen` is a `pushforward`, `pullback` or `hvp` scenario.
 """
-function batchify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function batchify(scen::LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     (; f, x, y, t, contexts, res1, res2, prep_args) = scen
     new_t = (only(t), -only(t))
     new_prep_args = if pl_fun == :out
@@ -78,7 +78,7 @@ function batchify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     end
     if op == :pushforward || op == :pullback
         new_res1 = (only(res1), -only(res1))
-        return Scenario{op, pl_op, pl_fun}(;
+        return LegacyScenario{op, pl_op, pl_fun}(;
             f,
             x,
             y,
@@ -91,7 +91,7 @@ function batchify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
         )
     elseif op == :hvp
         new_res2 = (only(res2), -only(res2))
-        return Scenario{op, pl_op, pl_fun}(;
+        return LegacyScenario{op, pl_op, pl_fun}(;
             f,
             x,
             y,
@@ -138,11 +138,11 @@ function (mc::WritableClosure{:in})(y, x)
 end
 
 """
-    closurify(scen::Scenario)
+    closurify(scen::LegacyScenario)
 
-Return a new `Scenario` identical to `scen` except for the function `f` which is made to close over differentiable data.
+Return a new `LegacyScenario` identical to `scen` except for the function `f` which is made to close over differentiable data.
 """
-function closurify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function closurify(scen::LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     (; f, x, y) = scen
     @assert isempty(scen.contexts)
     x_buffer = [zero(x)]
@@ -150,7 +150,7 @@ function closurify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     a = 3.0
     b = [4.0]
     closure_f = WritableClosure{pl_fun}(f, x_buffer, y_buffer, a, b)
-    return Scenario{op, pl_op, pl_fun}(;
+    return LegacyScenario{op, pl_op, pl_fun}(;
         f = closure_f,
         x = scen.x,
         y = mymultiply(scen.y, a + only(b)),
@@ -183,17 +183,17 @@ function (mc::MultiplyByConstant{:in})(y, x, a)
 end
 
 """
-    constantify(scen::Scenario)
+    constantify(scen::LegacyScenario)
 
-Return a new `Scenario` identical to `scen` except for the function `f`, which is made to accept an additional constant argument by which the output is multiplied.
+Return a new `LegacyScenario` identical to `scen` except for the function `f`, which is made to accept an additional constant argument by which the output is multiplied.
 The output and result fields are updated accordingly.
 """
-function constantify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function constantify(scen::LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     (; f) = scen
     @assert isempty(scen.contexts)
     multiply_f = MultiplyByConstant{pl_fun}(f)
     a = 3.0
-    return Scenario{op, pl_op, pl_fun}(;
+    return LegacyScenario{op, pl_op, pl_fun}(;
         f = multiply_f,
         x = scen.x,
         y = mymultiply(scen.y, a),
@@ -239,13 +239,13 @@ function (sc::StoreInCache{:in})(y, x, y_cache)
 end
 
 """
-    cachify(scen::Scenario)
+    cachify(scen::LegacyScenario)
 
-Return a new `Scenario` identical to `scen` except for the function `f`, which is made to accept an additional cache argument to store the result before it is returned.
+Return a new `LegacyScenario` identical to `scen` except for the function `f`, which is made to accept an additional cache argument to store the result before it is returned.
 
 If `tup=true` the cache is a tuple of arrays, otherwise just an array.
 """
-function cachify(scen::Scenario{op, pl_op, pl_fun}; use_tuples) where {op, pl_op, pl_fun}
+function cachify(scen::LegacyScenario{op, pl_op, pl_fun}; use_tuples) where {op, pl_op, pl_fun}
     (; f) = scen
     @assert isempty(scen.contexts)
     cache_f = StoreInCache{pl_fun}(f)
@@ -262,7 +262,7 @@ function cachify(scen::Scenario{op, pl_op, pl_fun}; use_tuples) where {op, pl_op
             similar(scen.y)
         end
     end
-    return Scenario{op, pl_op, pl_fun}(;
+    return LegacyScenario{op, pl_op, pl_fun}(;
         f = cache_f,
         x = scen.x,
         y = scen.y,
@@ -322,11 +322,11 @@ function (sc::MultiplyByConstantAndStoreInCache{:in})(y, x, constantorcache)
 end
 
 """
-    constantorcachify(scen::Scenario)
+    constantorcachify(scen::LegacyScenario)
 
-Return a new `Scenario` identical to `scen` except for the function `f`, which is made to accept an additional "constant or cache" argument.
+Return a new `LegacyScenario` identical to `scen` except for the function `f`, which is made to accept an additional "constant or cache" argument.
 """
-function constantorcachify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
+function constantorcachify(scen::LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_fun}
     (; f) = scen
     @assert isempty(scen.contexts)
     constantorcache_f = MultiplyByConstantAndStoreInCache{pl_fun}(f)
@@ -342,7 +342,7 @@ function constantorcachify(scen::Scenario{op, pl_op, pl_fun}) where {op, pl_op, 
     else
         (; cache = similar(scen.y), constant = (; a = 2a, b = 3b))
     end
-    return Scenario{op, pl_op, pl_fun}(;
+    return LegacyScenario{op, pl_op, pl_fun}(;
         f = constantorcache_f,
         x = scen.x,
         y = mymultiply(scen.y, a + only(b)),
@@ -357,15 +357,15 @@ end
 
 ## Group functions
 
-function batchify(scens::AbstractVector{<:Scenario})
+function batchify(scens::AbstractVector{<:LegacyScenario})
     batchifiable_scens = filter(s -> operator(s) in (:pushforward, :pullback, :hvp), scens)
     return batchify.(batchifiable_scens)
 end
 
-closurify(scens::AbstractVector{<:Scenario}) = closurify.(scens)
-constantify(scens::AbstractVector{<:Scenario}) = constantify.(scens)
-cachify(scens::AbstractVector{<:Scenario}; use_tuples) = cachify.(scens; use_tuples)
-constantorcachify(scens::AbstractVector{<:Scenario}) = constantorcachify.(scens)
+closurify(scens::AbstractVector{<:LegacyScenario}) = closurify.(scens)
+constantify(scens::AbstractVector{<:LegacyScenario}) = constantify.(scens)
+cachify(scens::AbstractVector{<:LegacyScenario}; use_tuples) = cachify.(scens; use_tuples)
+constantorcachify(scens::AbstractVector{<:LegacyScenario}) = constantorcachify.(scens)
 
 ## Compute results with backend
 
@@ -422,14 +422,14 @@ function get_res2(::Val{:hvp}, f, backend::AbstractADType, x, t, contexts...)
 end
 
 """
-    compute_results(scen::Scenario, backend::AbstractADType)
+    compute_results(scen::LegacyScenario, backend::AbstractADType)
 
 Return a scenario identical to `scen` but where the first- and second-order results `res1` and `res2` have been computed with the given differentiation `backend`.
 
 Useful for comparison of outputs between backends.
 """
 function compute_results(
-        scen::Scenario{op, pl_op, pl_fun}, backend::AbstractADType
+        scen::LegacyScenario{op, pl_op, pl_fun}, backend::AbstractADType
     ) where {op, pl_op, pl_fun}
     (; f, y, x, t, contexts, prep_args, name) = deepcopy(scen)
     if pl_fun == :in
@@ -449,7 +449,7 @@ function compute_results(
             new_res2 = get_res2(Val(op), f, backend, x, t, contexts...)
         end
     end
-    new_scen = Scenario{op, pl_op, pl_fun}(;
+    new_scen = LegacyScenario{op, pl_op, pl_fun}(;
         f, x, y, t, contexts, res1 = new_res1, res2 = new_res2, prep_args, name
     )
     return new_scen

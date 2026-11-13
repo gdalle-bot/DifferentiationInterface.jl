@@ -1,7 +1,7 @@
 """
     static_scenarios()
 
-Create a vector of [`Scenario`](@ref)s with static array types from [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl).
+Create a vector of [`LegacyScenario`](@ref)s with static array types from [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl).
 
 !!! warning
 
@@ -12,7 +12,7 @@ function static_scenarios end
 """
     component_scenarios()
 
-Create a vector of [`Scenario`](@ref)s with component array types from [ComponentArrays.jl](https://github.com/jonniedie/ComponentArrays.jl).
+Create a vector of [`LegacyScenario`](@ref)s with component array types from [ComponentArrays.jl](https://github.com/jonniedie/ComponentArrays.jl).
 
 !!! warning
 
@@ -23,7 +23,7 @@ function component_scenarios end
 """
     gpu_scenarios()
 
-Create a vector of [`Scenario`](@ref)s with GPU array types from [JLArrays.jl](https://github.com/JuliaGPU/GPUArrays.jl/tree/master/lib/JLArrays).
+Create a vector of [`LegacyScenario`](@ref)s with GPU array types from [JLArrays.jl](https://github.com/JuliaGPU/GPUArrays.jl/tree/master/lib/JLArrays).
 
 !!! warning
 
@@ -34,7 +34,7 @@ function gpu_scenarios end
 """
     flux_scenarios(rng=Random.default_rng())
 
-Create a vector of [`Scenario`](@ref)s with neural networks from [Flux.jl](https://github.com/FluxML/Flux.jl).
+Create a vector of [`LegacyScenario`](@ref)s with neural networks from [Flux.jl](https://github.com/FluxML/Flux.jl).
 
 !!! warning
 
@@ -57,7 +57,7 @@ function flux_isapprox end
 """
     lux_scenarios(rng=Random.default_rng())
 
-Create a vector of [`Scenario`](@ref)s with neural networks from [Lux.jl](https://github.com/LuxDL/Lux.jl).
+Create a vector of [`LegacyScenario`](@ref)s with neural networks from [Lux.jl](https://github.com/LuxDL/Lux.jl).
 
 !!! warning
 

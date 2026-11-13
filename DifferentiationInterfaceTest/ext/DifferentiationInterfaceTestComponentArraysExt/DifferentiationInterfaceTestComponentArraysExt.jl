@@ -28,18 +28,18 @@ function comp_to_num_scenarios_onearg(x::ComponentVector; dx::AbstractVector, dy
     grad = comp_to_num_gradient(x)
 
     # pushforward stays out of place
-    scens = DIT.Scenario[]
+    scens = DIT.LegacyScenario[]
     for pl_op in (:out, :in)
         append!(
             scens,
             [
-                DIT.Scenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
-                DIT.Scenario{:gradient, pl_op}(f, x; res1 = grad),
+                DIT.LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
+                DIT.LegacyScenario{:gradient, pl_op}(f, x; res1 = grad),
             ],
         )
     end
     for pl_op in (:out,)
-        append!(scens, [DIT.Scenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,))])
+        append!(scens, [DIT.LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,))])
     end
     return scens
 end
