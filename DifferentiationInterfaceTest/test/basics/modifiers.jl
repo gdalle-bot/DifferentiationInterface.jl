@@ -54,7 +54,8 @@ canonical = [
     ),
 ]
 
-scens = map(TripleScenario, mapreduce(DIT.all_variants, vcat, canonical))
+# all outputs are arrays
+scens = map(TripleScenario, mapreduce(s -> DIT.all_variants(s; include_inplace = true), vcat, canonical))
 n_tangent_scens = count(ts -> DIT.needs_tangent(DIT.operator(ts)), scens)
 
 function correctness_counts(backend, scens; rtol = 1.0e-8)
