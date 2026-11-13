@@ -1,10 +1,13 @@
 """
     supports_inplace_output(x)
 
-Return `true` if a buffer similar to `x` can be overwritten with `x`, by actually trying it.
+Return `true` if a buffer similar to the array `x` can be overwritten with `x`, by actually trying it.
+
+Always return `false` for objects which are neither arrays nor tuples of arrays.
 """
 supports_inplace_output(x::Tuple) = all(supports_inplace_output, x)
-function supports_inplace_output(x)
+supports_inplace_output(_) = false
+function supports_inplace_output(x::AbstractArray)
     try
         copyto!(mysimilar(x), x)
         return true
