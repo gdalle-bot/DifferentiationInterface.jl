@@ -41,14 +41,16 @@ s = @scenario value_and_gradient(f, missing, xv) Result(f(xv), ∇f(xv), nothing
 The [`Result`](@ref) stores the reference outputs by differentiation order: here the value and the gradient.
 Every order returned by the operator must be provided, and all of them are compared.
 
-From such a scenario, [`DifferentiationInterfaceTest.all_variants`](@ref) generates the other operators of the same family: with or without the value, in-place or out-of-place.
+From such a scenario, [`DifferentiationInterfaceTest.all_variants`](@ref) generates the other operators of the same family: with or without the value, out-of-place and, if you ask for it with `include_inplace=true`, in-place.
+The in-place variants overwrite output buffers, so only include them when the outputs are mutable arrays, as is the case for the gradients below.
 
 ```@example tuto
 xm = rand(Float64, 3, 2)
 scenarios = vcat(
-    DifferentiationInterfaceTest.all_variants(s),
+    DifferentiationInterfaceTest.all_variants(s; include_inplace=true),
     DifferentiationInterfaceTest.all_variants(
-        @scenario value_and_gradient(f, missing, xm) Result(f(xm), ∇f(xm), nothing)
+        @scenario(value_and_gradient(f, missing, xm), Result(f(xm), ∇f(xm), nothing));
+        include_inplace=true,
     ),
 )
 ```
