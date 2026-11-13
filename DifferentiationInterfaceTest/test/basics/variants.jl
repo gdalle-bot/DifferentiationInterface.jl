@@ -19,7 +19,7 @@ canonical_scenarios = [
     (@scenario value_gradient_and_hvp(f_scalar, missing, x, dx) Result(5.0, 2x, (2 .* dx))),
     (@scenario value_and_pushforward(f_vec!, y, missing, x, dx) Result(2x, (2 .* dx), nothing)),
     (@scenario value_and_jacobian(f_vec!, y, missing, x) Result(2x, [2.0 0; 0 2], nothing)),
-    # scalar output: no in-place variants
+    # scalar outputs
     (@scenario value_and_derivative(sin, missing, 1.0) Result(sin(1.0), cos(1.0), nothing)),
     (
         @scenario value_derivative_and_second_derivative(sin, missing, 1.0) Result(
@@ -29,11 +29,14 @@ canonical_scenarios = [
 ]
 
 @testset "All variants of $s" for s in canonical_scenarios
-    variants = DIT.all_variants(s)
+    # scalar outputs cannot be overwritten
+    include_inplace = !(DIT.result(s).order1 isa Number)
+    variants = DIT.all_variants(s; include_inplace)
     std = DIT.standard(DIT.operator(s))
     @test allunique(map(DIT.operator, variants))
     @test all(v -> DIT.standard(DIT.operator(v)) === std, variants)
-    @test length(variants) == (DIT.result(s).order1 isa Number ? 2 : 4)
+    @test length(variants) == (include_inplace ? 4 : 2)
+    @test !any(v -> DIT.is_inplace(DIT.operator(v)), DIT.all_variants(s; include_inplace = false))
     for v in variants
         @test DIT.result(v) === DIT.result(s)
         @test DIT.func(v) === DIT.func(s)
@@ -62,18 +65,11 @@ end
         value_gradient_and_hessian
 end
 
-@testset "In-place outputs" begin
-    @test DIT.supports_inplace_output([1.0, 2.0])
-    @test DIT.supports_inplace_output(([1.0], [2.0;;]))
-    @test !DIT.supports_inplace_output(1.0)
-    @test !DIT.supports_inplace_output(([1.0], 2.0))
-end
-
 @testset "Errors" begin
     s = @scenario gradient(f_scalar, missing, x) Result(; order1 = 2x)
     # the value is missing from the result
     @test_throws ArgumentError DIT.with_value(s)
-    @test_throws ArgumentError DIT.all_variants(s)
+    @test_throws ArgumentError DIT.all_variants(s; include_inplace = false)
     @test_throws ArgumentError DIT.change_operator(s, hessian)
     @test_throws ArgumentError DIT.inplace(@scenario gradient(f_scalar, missing, x))
 end
