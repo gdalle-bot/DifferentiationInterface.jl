@@ -56,21 +56,37 @@ end
 
 @testset "Validation" begin
     x, y, dx = [1.0, 2.0], [0.0, 0.0], ([1.0, 0.0],)
-    @test_throws ArgumentError Scenario(sum, f_scalar, (), (x,))
+    @test_throws ArgumentError("`sum` is not a supported DifferentiationInterface operator") Scenario(
+        sum, f_scalar, (), (x,)
+    )
     # wrong number of buffers
-    @test_throws ArgumentError Scenario(gradient!, f_scalar, (), (x,))
-    @test_throws ArgumentError Scenario(value_gradient_and_hessian!, f_scalar, (x,), (x,))
+    @test_throws ArgumentError(
+        "Operator `gradient!` takes 1 output buffer(s) before the backend, plus `y` for in-place functions, but got 0 argument(s)",
+    ) Scenario(gradient!, f_scalar, (), (x,))
+    @test_throws ArgumentError(
+        "Operator `value_gradient_and_hessian!` takes 2 output buffer(s) before the backend, plus `y` for in-place functions, but got 1 argument(s)",
+    ) Scenario(value_gradient_and_hessian!, f_scalar, (x,), (x,))
     # in-place functions only for some operators
     @test Scenario(jacobian, f_vec!, (y,), (x,)) isa Scenario
-    @test_throws ArgumentError Scenario(gradient, f_vec!, (y,), (x,))
+    @test_throws ArgumentError("Operator `gradient` does not support in-place functions") Scenario(
+        gradient, f_vec!, (y,), (x,)
+    )
     # tangents
     @test Scenario(pushforward, f_vec!, (y,), (x, dx)) isa Scenario
-    @test_throws ArgumentError Scenario(pushforward, f_vec!, (y,), (x,))
-    @test_throws ArgumentError Scenario(pushforward, f_vec!, (y,), (x, x))
+    @test_throws ArgumentError(
+        "Operator `pushforward` needs at least 2 argument(s) after the backend, got 1"
+    ) Scenario(pushforward, f_vec!, (y,), (x,))
+    @test_throws ArgumentError("Operator `pushforward` needs a tuple of tangents after the input `x`") Scenario(
+        pushforward, f_vec!, (y,), (x, x)
+    )
     # contexts
-    @test_throws ArgumentError Scenario(gradient, f_scalar, (), (x, 1.0))
+    @test_throws ArgumentError("Extra arguments must be contexts, got Float64") Scenario(
+        gradient, f_scalar, (), (x, 1.0)
+    )
     # result
-    @test_throws ArgumentError Scenario(
+    @test_throws ArgumentError(
+        "Operator `value_and_gradient` returns order 0 but the reference `Result` does not contain it",
+    ) Scenario(
         value_and_gradient, f_scalar, (), (x,); result = Result(; order1 = x)
     )
 end

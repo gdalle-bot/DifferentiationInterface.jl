@@ -185,6 +185,15 @@ end
     @test counts == (; passes = 1, failures = 1)
 end
 
+## Missing reference
+
+@testset "Missing reference" begin
+    s = @scenario gradient(f_arr, missing, x, Constant(c))
+    @test_throws ArgumentError(
+        "Correctness tests require a reference result for the executed scenario"
+    ) DIT.test_correctness(backend, TripleScenario(s); kwargs...)
+end
+
 ## Scenario intact
 
 function f_mutating(x, c)
