@@ -21,14 +21,20 @@ x = [1.0, 2.0]
 dx = ([1.0, 0.0],)
 
 scens = vcat(
-    DIT.all_variants(@scenario value_and_gradient(f_scalar, missing, x) Result(5.0, 2x, nothing)),
     DIT.all_variants(
-        @scenario value_gradient_and_hvp(f_scalar, missing, x, dx) Result(5.0, 2x, (2 .* dx))
+        @scenario(value_and_gradient(f_scalar, missing, x), Result(5.0, 2x, nothing));
+        include_inplace = true,
     ),
     DIT.all_variants(
-        @scenario value_and_jacobian(f_vec!, zeros(2), missing, x) Result(
-            2x, sparse([2.0 0.0; 0.0 2.0]), nothing
-        )
+        @scenario(value_gradient_and_hvp(f_scalar, missing, x, dx), Result(5.0, 2x, (2 .* dx)));
+        include_inplace = true,
+    ),
+    DIT.all_variants(
+        @scenario(
+            value_and_jacobian(f_vec!, zeros(2), missing, x),
+            Result(2x, sparse([2.0 0.0; 0.0 2.0]), nothing)
+        );
+        include_inplace = true,
     ),
 )
 

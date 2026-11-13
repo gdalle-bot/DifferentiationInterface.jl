@@ -27,11 +27,11 @@ function comp_to_num_canonical_onearg(x::ComponentVector; dx::AbstractVector, dy
     return [
         DIT.canonical_scenario(
             value_and_pullback, f, x, (dy,); res1 = (comp_to_num_pullback(x, dy),)
-        ),
-        DIT.canonical_scenario(value_and_gradient, f, x; res1 = comp_to_num_gradient(x)),
+        ) => true,
+        DIT.canonical_scenario(value_and_gradient, f, x; res1 = comp_to_num_gradient(x)) => true,
         DIT.canonical_scenario(
             value_and_pushforward, f, x, (dx,); res1 = (comp_to_num_pushforward(x, dx),)
-        ),
+        ) => false,
     ]
 end
 
@@ -45,7 +45,7 @@ function DIT.component_scenarios(; include_mismatched = true)
 
     canonical = comp_to_num_canonical_onearg(x_comp; dx = dx_comp, dy = dy_)
     scens = DIT.TripleScenario[
-        DIT.TripleScenario(v) for s in canonical for v in DIT.all_variants(s)
+        DIT.TripleScenario(v) for p in canonical for v in DIT.tagged_variants(p)
     ]
     include_mismatched && DIT.add_mismatched!(scens)
     return scens
