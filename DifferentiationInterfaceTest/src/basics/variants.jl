@@ -1,14 +1,17 @@
 """
     supports_inplace_output(x)
 
-Return `true` if objects similar to `x` can be overwritten by in-place operators.
-
-Defaults to `true` for arrays and tuples of arrays, `false` otherwise.
-Extensions can add methods for immutable array types.
+Return `true` if a buffer similar to `x` can be overwritten with `x`, by actually trying it.
 """
-supports_inplace_output(::AbstractArray) = true
 supports_inplace_output(x::Tuple) = all(supports_inplace_output, x)
-supports_inplace_output(_) = false
+function supports_inplace_output(x)
+    try
+        copyto!(mysimilar(x), x)
+        return true
+    catch
+        return false
+    end
+end
 
 """
     make_buffers(op, r::Result)
@@ -25,7 +28,7 @@ end
 
 Return a scenario identical to `s` but with operator `new_op`, which must be in the same family.
 
-The output buffers are rebuilt from the reference result of `s`.
+The output buffers are rebuilt from the reference result of `s`, and the primal output `y` (for in-place functions) is copied.
 """
 function change_operator(@nospecialize(s::Scenario), @nospecialize(new_op))
     if standard(new_op) !== standard(operator(s))
@@ -39,7 +42,7 @@ function change_operator(@nospecialize(s::Scenario), @nospecialize(new_op))
     return Scenario(
         new_op,
         func(s),
-        (value_args(s)..., make_buffers(new_op, r)...),
+        (map(deepcopy, value_args(s))..., make_buffers(new_op, r)...),
         post_backend_args(s);
         result = r,
         name = name(s),

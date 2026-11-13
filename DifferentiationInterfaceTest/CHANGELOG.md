@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`)
+- Call-based scenarios: `Scenario`, `@scenario`, `TripleScenario`, `Result` and `custom_zero` (not yet used by `test_differentiation`) ([#3](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/3), [#4](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/4))
 - `test_differentiation` accepts call-based scenarios, possibly mixed with legacy ones
 - Type stability (JET), allocation (AllocCheck) and benchmark (Chairmarks) checks for call-based scenarios
 - Hook-based scenario modifiers for call-based scenarios (`zero_der`, `batchify`, `closurify`, `constantify`, `cachify`, `constantorcachify`, `change_function`, `mismatch`, `compute_results`)
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios
+- **Breaking:** the old `Scenario` type is renamed `LegacyScenario`, to make room for call-based scenarios ([#1](https://github.com/gdalle-bot/DifferentiationInterface.jl/pull/1))
 - **Breaking:** `default_scenarios` returns call-based `TripleScenario`s, with one scenario per operator variant, and new keyword arguments `include_mismatched=true` (preparation mismatch scenarios) and `modifiers=()`
 - Test `value_gradient_and_hvp(!)` instead of the deprecated `gradient_and_hvp(!)`, which requires DifferentiationInterface v0.7.22 ([#1086](https://github.com/JuliaDiff/DifferentiationInterface.jl/pull/1086))
 
