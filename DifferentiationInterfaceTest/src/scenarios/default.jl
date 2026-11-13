@@ -685,25 +685,36 @@ function canonical_scenario!(op, f!, y, x, t = nothing; res1)
     return Scenario(op, f!, (copy(y),), make_post(x, t); result = Result(copy(y), res1, nothing))
 end
 
+"""
+    tagged_variants((s => include_inplace)::Pair)
+
+Return `all_variants(s; include_inplace)`.
+
+Canonical scenario builders return `scenario => include_inplace` pairs, where `include_inplace` states whether the outputs of the operator can be overwritten in-place (typically when they are mutable arrays, not numbers).
+"""
+function tagged_variants(@nospecialize(p::Pair{<:Scenario, Bool}))
+    return all_variants(first(p); include_inplace = last(p))
+end
+
 function num_to_num_canonical(x::Number; dx::Number, dy::Number)
     f = num_to_num
     der = num_to_num_derivative(x)
     return [
-        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (num_to_num_pushforward(x, dx),)),
-        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (num_to_num_pullback(x, dy),)),
-        canonical_scenario(value_and_derivative, f, x; res1 = der),
+        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (num_to_num_pushforward(x, dx),)) => false,
+        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (num_to_num_pullback(x, dy),)) => false,
+        canonical_scenario(value_and_derivative, f, x; res1 = der) => false,
         canonical_scenario(
             value_derivative_and_second_derivative, f, x; res1 = der, res2 = num_to_num_second_derivative(x)
-        ),
+        ) => false,
     ]
 end
 
 function onevec_to_onevec_canonical_onearg(x::Number; dx::Number, dy::Number)
     f = onevec_to_onevec
     return [
-        canonical_scenario(value_and_pushforward, f, [x], ([dx],); res1 = ([num_to_num_pushforward(x, dx)],)),
-        canonical_scenario(value_and_pullback, f, [x], ([dy],); res1 = ([num_to_num_pullback(x, dy)],)),
-        canonical_scenario(value_and_jacobian, f, [x]; res1 = fill(num_to_num_derivative(x), 1, 1)),
+        canonical_scenario(value_and_pushforward, f, [x], ([dx],); res1 = ([num_to_num_pushforward(x, dx)],)) => true,
+        canonical_scenario(value_and_pullback, f, [x], ([dy],); res1 = ([num_to_num_pullback(x, dy)],)) => true,
+        canonical_scenario(value_and_jacobian, f, [x]; res1 = fill(num_to_num_derivative(x), 1, 1)) => true,
     ]
 end
 
@@ -711,18 +722,18 @@ function onevec_to_onevec_canonical_twoarg(x::Number; dx::Number, dy::Number)
     f! = onevec_to_onevec!
     y = [num_to_num(x)]
     return [
-        canonical_scenario!(value_and_pushforward, f!, y, [x], ([dx],); res1 = ([num_to_num_pushforward(x, dx)],)),
-        canonical_scenario!(value_and_pullback, f!, y, [x], ([dy],); res1 = ([num_to_num_pullback(x, dy)],)),
-        canonical_scenario!(value_and_jacobian, f!, y, [x]; res1 = fill(num_to_num_derivative(x), 1, 1)),
+        canonical_scenario!(value_and_pushforward, f!, y, [x], ([dx],); res1 = ([num_to_num_pushforward(x, dx)],)) => true,
+        canonical_scenario!(value_and_pullback, f!, y, [x], ([dy],); res1 = ([num_to_num_pullback(x, dy)],)) => true,
+        canonical_scenario!(value_and_jacobian, f!, y, [x]; res1 = fill(num_to_num_derivative(x), 1, 1)) => true,
     ]
 end
 
 function num_to_arr_canonical_onearg(f, x::Number; dx::Number, dy::AbstractArray, der, der2, pushforward, pullback)
     return [
-        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (pushforward(x, dx),)),
-        canonical_scenario(value_and_derivative, f, x; res1 = der(x)),
-        canonical_scenario(value_derivative_and_second_derivative, f, x; res1 = der(x), res2 = der2(x)),
-        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (pullback(x, dy),)),
+        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (pushforward(x, dx),)) => true,
+        canonical_scenario(value_and_derivative, f, x; res1 = der(x)) => true,
+        canonical_scenario(value_derivative_and_second_derivative, f, x; res1 = der(x), res2 = der2(x)) => true,
+        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (pullback(x, dy),)) => false,
     ]
 end
 
@@ -730,9 +741,9 @@ function num_to_arr_canonical_twoarg(f!, x::Number; dx::Number, dy::AbstractArra
     y = similar(dy)
     f!(y, x)
     return [
-        canonical_scenario!(value_and_pushforward, f!, y, x, (dx,); res1 = (pushforward(x, dx; y),)),
-        canonical_scenario!(value_and_derivative, f!, y, x; res1 = der(x; y)),
-        canonical_scenario!(value_and_pullback, f!, y, x, (dy,); res1 = (pullback(x, dy),)),
+        canonical_scenario!(value_and_pushforward, f!, y, x, (dx,); res1 = (pushforward(x, dx; y),)) => true,
+        canonical_scenario!(value_and_derivative, f!, y, x; res1 = der(x; y)) => true,
+        canonical_scenario!(value_and_pullback, f!, y, x, (dy,); res1 = (pullback(x, dy),)) => false,
     ]
 end
 
@@ -772,27 +783,27 @@ function arr_to_num_canonical_onearg(x::AbstractArray; dx::AbstractArray, dy::Nu
     f = linalg ? arr_to_num_linalg : arr_to_num_no_linalg
     grad = arr_to_num_gradient(x)
     return [
-        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (arr_to_num_pullback(x, dy),)),
-        canonical_scenario(value_and_gradient, f, x; res1 = grad),
-        canonical_scenario(value_gradient_and_hvp, f, x, (dx,); res1 = grad, res2 = (arr_to_num_hvp(x, dx),)),
-        canonical_scenario(value_gradient_and_hessian, f, x; res1 = grad, res2 = arr_to_num_hessian(x)),
-        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (arr_to_num_pushforward(x, dx),)),
+        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (arr_to_num_pullback(x, dy),)) => true,
+        canonical_scenario(value_and_gradient, f, x; res1 = grad) => true,
+        canonical_scenario(value_gradient_and_hvp, f, x, (dx,); res1 = grad, res2 = (arr_to_num_hvp(x, dx),)) => true,
+        canonical_scenario(value_gradient_and_hessian, f, x; res1 = grad, res2 = arr_to_num_hessian(x)) => true,
+        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (arr_to_num_pushforward(x, dx),)) => false,
     ]
 end
 
 function arr_to_arr_canonical(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
     return [
-        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (dy_from_dx,)),
-        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (dx_from_dy,)),
-        canonical_scenario(value_and_jacobian, f, x; res1 = jac),
+        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (dy_from_dx,)) => true,
+        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (dx_from_dy,)) => true,
+        canonical_scenario(value_and_jacobian, f, x; res1 = jac) => true,
     ]
 end
 
 function arr_to_arr_canonical!(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
     return [
-        canonical_scenario!(value_and_pushforward, f!, y, x, (dx,); res1 = (dy_from_dx,)),
-        canonical_scenario!(value_and_pullback, f!, y, x, (dy,); res1 = (dx_from_dy,)),
-        canonical_scenario!(value_and_jacobian, f!, y, x; res1 = jac),
+        canonical_scenario!(value_and_pushforward, f!, y, x, (dx,); res1 = (dy_from_dx,)) => true,
+        canonical_scenario!(value_and_pullback, f!, y, x, (dy,); res1 = (dx_from_dy,)) => true,
+        canonical_scenario!(value_and_jacobian, f!, y, x; res1 = jac) => true,
     ]
 end
 
@@ -914,10 +925,10 @@ function default_scenarios(;
         modifiers = (),
     )
     canonical = default_canonical_scenarios(; linalg, smaller = false)
-    scens = map(TripleScenario, mapreduce(all_variants, vcat, canonical))
+    scens = map(TripleScenario, mapreduce(tagged_variants, vcat, canonical))
     smaller_scens = if include_smaller
         smaller_canonical = default_canonical_scenarios(; linalg, smaller = true)
-        smaller_variants = mapreduce(all_variants, vcat, smaller_canonical)
+        smaller_variants = mapreduce(tagged_variants, vcat, smaller_canonical)
         map(scens, smaller_variants) do ts, small
             @assert operator(ts) === operator(small)
             TripleScenario(
