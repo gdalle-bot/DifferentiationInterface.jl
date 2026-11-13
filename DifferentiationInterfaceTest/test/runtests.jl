@@ -51,6 +51,9 @@ LOGGING = get(ENV, "CI", "false") == "false"
     end
 
     if GROUP == "Standard" || GROUP == "All"
+        @testset verbose = true "Engine" begin
+            include("engine/correctness.jl")
+        end
         @testset verbose = true "Standard" begin
             include("standard.jl")
         end
