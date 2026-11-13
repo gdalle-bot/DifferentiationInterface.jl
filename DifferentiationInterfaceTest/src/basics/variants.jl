@@ -1,22 +1,4 @@
 """
-    supports_inplace_output(x)
-
-Return `true` if a buffer similar to the array `x` can be overwritten with `x`, by actually trying it.
-
-Always return `false` for objects which are neither arrays nor tuples of arrays.
-"""
-supports_inplace_output(x::Tuple) = all(supports_inplace_output, x)
-supports_inplace_output(_) = false
-function supports_inplace_output(x::AbstractArray)
-    try
-        copyto!(mysimilar(x), x)
-        return true
-    catch
-        return false
-    end
-end
-
-"""
     make_buffers(op, r::Result)
 
 Return the tuple of output buffers taken by `op`, built from the reference result `r`.
@@ -58,27 +40,19 @@ inplace(s::Scenario) = change_operator(s, inplace(operator(s)))
 outofplace(s::Scenario) = change_operator(s, outofplace(operator(s)))
 
 """
-    can_be_inplace(s::Scenario)
+    all_variants(s::Scenario; include_inplace::Bool)
 
-Return `true` if the outputs of the operator in `s` can be written to buffers.
-"""
-function can_be_inplace(s::Scenario)
-    r = result(s)
-    isnothing(r) && return false
-    orders = filter(!iszero, returned_orders(with_value(operator(s))))
-    return all(k -> supports_inplace_output(getorder(r, k)), orders)
-end
-
-"""
-    all_variants(s::Scenario)
-
-Return the vector of scenarios with every operator in the family of `s`: with and without value, out-of-place and in-place (when the outputs support it).
+Return the vector of scenarios with every operator in the family of `s`: with and without value, out-of-place and, if `include_inplace` is `true`, in-place.
 
 The reference result of `s` must contain every differentiation order.
+In-place variants require outputs which can be overwritten, such as mutable arrays: this is up to the caller.
 """
-function all_variants(s::Scenario)
+function all_variants(s::Scenario; include_inplace::Bool)
     std = standard(operator(s))
-    ops = can_be_inplace(s) ? (std, inplace(std), with_value(std), inplace(with_value(std))) :
+    ops = if include_inplace
+        (std, inplace(std), with_value(std), inplace(with_value(std)))
+    else
         (std, with_value(std))
+    end
     return [change_operator(s, op) for op in ops]
 end
