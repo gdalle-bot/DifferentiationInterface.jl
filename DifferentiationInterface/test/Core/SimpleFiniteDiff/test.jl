@@ -99,7 +99,6 @@ end
             include_constantorcachified = true,
             use_tuples = true,
         );
-        sparsity = true,
         logging = LOGGING,
     )
 

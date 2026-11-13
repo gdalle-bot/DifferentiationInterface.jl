@@ -28,7 +28,6 @@ test_differentiation(
 test_differentiation(
     AutoSparse(AutoSymbolics()),
     sparse_scenarios(; band_sizes = 0:-1);
-    sparsity = true,
     logging = LOGGING,
 );
 
