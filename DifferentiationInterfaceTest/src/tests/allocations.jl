@@ -1,3 +1,8 @@
+function test_noallocs(skip::Bool, func, args...)
+    possible_allocations = check_allocs(func, typeof.(args); ignore_throw = true)
+    return @test isempty(possible_allocations) skip = skip
+end
+
 """
     prepared_calls(backend, ts::TripleScenario)
 

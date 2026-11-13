@@ -34,7 +34,7 @@ function gpu_scenarios end
 """
     flux_scenarios(rng=Random.default_rng())
 
-Create a vector of [`LegacyScenario`](@ref)s with neural networks from [Flux.jl](https://github.com/FluxML/Flux.jl).
+Create a vector of [`TripleScenario`](@ref)s with neural networks from [Flux.jl](https://github.com/FluxML/Flux.jl).
 
 !!! warning
 
@@ -57,7 +57,7 @@ function flux_isapprox end
 """
     lux_scenarios(rng=Random.default_rng())
 
-Create a vector of [`LegacyScenario`](@ref)s with neural networks from [Lux.jl](https://github.com/LuxDL/Lux.jl).
+Create a vector of [`TripleScenario`](@ref)s with neural networks from [Lux.jl](https://github.com/LuxDL/Lux.jl).
 
 !!! warning
 

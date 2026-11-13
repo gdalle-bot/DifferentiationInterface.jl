@@ -30,24 +30,33 @@ Of course we know the true gradient mapping:
 ∇f(x::AbstractArray) = cos.(x)
 ```
 
-DifferentiationInterfaceTest.jl relies with so-called [`LegacyScenario`](@ref)s, in which you encapsulate the information needed for your test:
-
-- the operator category (here `:gradient`)
-- the behavior of the operator (either `:in` or `:out` of place)
-- the function `f`
-- the input `x` of the function `f` (and possible tangents or contexts)
-- the reference first-order result `res1` (and possible second-order result `res2`) of the operator
-- the arguments `prep_args` passed during preparation
+DifferentiationInterfaceTest.jl relies on so-called [`Scenario`](@ref)s, each of which encapsulates one call to a DifferentiationInterface operator, together with the reference [`Result`](@ref) it should return.
+The easiest way to create a scenario is the [`@scenario`](@ref) macro, where you write the call itself with `missing` in place of the backend:
 
 ```@example tuto
 xv = rand(Float32, 3)
-xm = rand(Float64, 3, 2)
-scenarios = [
-    LegacyScenario{:gradient,:out}(f, xv; res1=∇f(xv)),
-    LegacyScenario{:gradient,:out}(f, xm; res1=∇f(xm)),
-];
-nothing  # hide
+s = @scenario value_and_gradient(f, missing, xv) Result(f(xv), ∇f(xv), nothing)
 ```
+
+The [`Result`](@ref) stores the reference outputs by differentiation order: here the value and the gradient.
+Every order returned by the operator must be provided, and all of them are compared.
+
+From such a scenario, [`DifferentiationInterfaceTest.all_variants`](@ref) generates the other operators of the same family: with or without the value, out-of-place and, if you ask for it with `include_inplace=true`, in-place.
+The in-place variants overwrite output buffers, so only include them when the outputs are mutable arrays, as is the case for the gradients below.
+
+```@example tuto
+xm = rand(Float64, 3, 2)
+scenarios = vcat(
+    DifferentiationInterfaceTest.all_variants(s; include_inplace=true),
+    DifferentiationInterfaceTest.all_variants(
+        @scenario(value_and_gradient(f, missing, xm), Result(f(xm), ∇f(xm), nothing));
+        include_inplace=true,
+    ),
+)
+```
+
+When testing, each scenario is wrapped into a [`TripleScenario`](@ref), which prepares the operator on zero inputs, then executes it twice on the actual inputs, with a "flush" call on other inputs in between.
+This makes sure that the preparation result can be reused safely.
 
 ## Testing
 

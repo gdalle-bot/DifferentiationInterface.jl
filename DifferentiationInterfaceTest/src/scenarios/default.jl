@@ -17,85 +17,11 @@ num_to_num_second_derivative(x) = -sin(x)
 num_to_num_pushforward(x, dx) = num_to_num_derivative(x) * dx
 num_to_num_pullback(x, dy) = conj(num_to_num_derivative(x)) * dy
 
-function num_to_num_scenarios(x::Number; dx::Number, dy::Number)
-    f = num_to_num
-    y = f(x)
-    dy_from_dx = num_to_num_pushforward(x, dx)
-    dx_from_dy = num_to_num_pullback(x, dy)
-    der = num_to_num_derivative(x)
-    der2 = num_to_num_second_derivative(x)
-
-    # everyone out of place
-    scens = LegacyScenario[
-        LegacyScenario{:pushforward, :out}(f, x, (dx,); res1 = (dy_from_dx,)),
-        LegacyScenario{:pullback, :out}(f, x, (dy,); res1 = (dx_from_dy,)),
-        LegacyScenario{:derivative, :out}(f, x; res1 = der),
-        LegacyScenario{:second_derivative, :out}(f, x; res1 = der, res2 = der2),
-    ]
-    return scens
-end
-
 onevec_to_onevec(x) = sin.(x)
 
 function onevec_to_onevec!(y, x)
     map!(sin, y, x)
     return nothing
-end
-
-function onevec_to_onevec_scenarios_onearg(x::Number; dx::Number, dy::Number)
-    f = num_to_num
-    y = f(x)
-    dy_from_dx = num_to_num_pushforward(x, dx)
-    dx_from_dy = num_to_num_pullback(x, dy)
-    der = num_to_num_derivative(x)
-
-    jac = fill(der, 1, 1)
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(
-                    onevec_to_onevec, [x], ([dx],); res1 = ([dy_from_dx],)
-                ),
-                LegacyScenario{:pullback, pl_op}(
-                    onevec_to_onevec, [x], ([dy],); res1 = ([dx_from_dy],)
-                ),
-                LegacyScenario{:jacobian, pl_op}(onevec_to_onevec, [x]; res1 = jac),
-            ],
-        )
-    end
-
-    return scens
-end
-
-function onevec_to_onevec_scenarios_twoarg(x::Number; dx::Number, dy::Number)
-    f = num_to_num
-    y = f(x)
-    dy_from_dx = num_to_num_pushforward(x, dx)
-    dx_from_dy = num_to_num_pullback(x, dy)
-    der = num_to_num_derivative(x)
-
-    jac = fill(der, 1, 1)
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(
-                    onevec_to_onevec!, [y], [x], ([dx],); res1 = ([dy_from_dx],)
-                ),
-                LegacyScenario{:pullback, pl_op}(
-                    onevec_to_onevec!, [y], [x], ([dy],); res1 = ([dx_from_dy],)
-                ),
-                LegacyScenario{:jacobian, pl_op}(onevec_to_onevec!, [y], [x]; res1 = jac),
-            ],
-        )
-    end
-
-    return scens
 end
 
 ## Number to vector
@@ -122,56 +48,6 @@ num_to_vec!_pushforward(x, dx; y) = dx .* num_to_vec!_derivative(x; y)
 
 function num_to_vec!_pullback(x, dy)
     return sum(conj(num_to_vec!_derivative(x; y = similar(dy))) .* dy)
-end
-
-function num_to_vec_scenarios_onearg(x::Number; dx::Number, dy::AbstractArray)
-    f = num_to_vec
-    dy_from_dx = num_to_vec_pushforward(x, dx)
-    dx_from_dy = num_to_vec_pullback(x, dy)
-    der = num_to_vec_derivative(x)
-    der2 = num_to_vec_second_derivative(x)
-
-    # pullback stays out of place
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
-                LegacyScenario{:derivative, pl_op}(f, x; res1 = der),
-                LegacyScenario{:second_derivative, pl_op}(f, x; res1 = der, res2 = der2),
-            ],
-        )
-    end
-    for pl_op in (:out,)
-        append!(scens, [LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,))])
-    end
-    return scens
-end
-
-function num_to_vec_scenarios_twoarg(x::Number; dx::Number, dy::AbstractArray)
-    f! = num_to_vec!
-    y = similar(dy)
-    f!(y, x)
-    dy_from_dx = num_to_vec!_pushforward(x, dx; y)
-    dx_from_dy = num_to_vec!_pullback(x, dy)
-    der = num_to_vec!_derivative(x; y)
-
-    # pullback stays out of place
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-                LegacyScenario{:derivative, pl_op}(f!, y, x; res1 = der),
-            ],
-        )
-    end
-    for pl_op in (:out,)
-        append!(scens, [LegacyScenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,))])
-    end
-    return scens
 end
 
 ## Number to matrix
@@ -208,56 +84,6 @@ function num_to_mat!_pushforward(x, dx; y)
 end
 function num_to_mat!_pullback(x, dy)
     return num_to_vec!_pullback(x, dy[:, 1]) + 3 * num_to_vec!_pullback(3x, dy[:, 2])
-end
-
-function num_to_mat_scenarios_onearg(x::Number; dx::Number, dy::AbstractArray)
-    f = num_to_mat
-    dy_from_dx = num_to_mat_pushforward(x, dx)
-    dx_from_dy = num_to_mat_pullback(x, dy)
-    der = num_to_mat_derivative(x)
-    der2 = num_to_mat_second_derivative(x)
-
-    # pullback stays out of place
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
-                LegacyScenario{:derivative, pl_op}(f, x; res1 = der),
-                LegacyScenario{:second_derivative, pl_op}(f, x; res1 = der, res2 = der2),
-            ],
-        )
-    end
-    for pl_op in (:out,)
-        append!(scens, [LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,))])
-    end
-    return scens
-end
-
-function num_to_mat_scenarios_twoarg(x::Number; dx::Number, dy::AbstractArray)
-    f! = num_to_mat!
-    y = similar(dy)
-    f!(y, x)
-    dy_from_dx = num_to_mat!_pushforward(x, dx; y)
-    dx_from_dy = num_to_mat!_pullback(x, dy)
-    der = num_to_mat!_derivative(x; y)
-
-    # pullback stays out of place
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-                LegacyScenario{:derivative, pl_op}(f!, y, x; res1 = der),
-            ],
-        )
-    end
-    for pl_op in (:out,)
-        append!(scens, [LegacyScenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,))])
-    end
-    return scens
 end
 
 ## Array to number
@@ -310,66 +136,7 @@ arr_to_num_pushforward(x, dx) = sum(conj.(arr_to_num_gradient(x)) .* dx)
 arr_to_num_pullback(x, dy) = arr_to_num_gradient(x) .* dy
 arr_to_num_hvp(x, dx) = reshape(arr_to_num_hessian(x) * vec(dx), size(x))
 
-function arr_to_num_scenarios_onearg(
-        x::AbstractArray; dx::AbstractArray, dy::Number, linalg = true
-    )
-    f = linalg ? arr_to_num_linalg : arr_to_num_no_linalg
-    dy_from_dx = arr_to_num_pushforward(x, dx)
-    dx_from_dy = arr_to_num_pullback(x, dy)
-    grad = arr_to_num_gradient(x)
-    dg = arr_to_num_hvp(x, dx)
-    hess = arr_to_num_hessian(x)
-
-    # pushforward stays out of place
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
-                LegacyScenario{:gradient, pl_op}(f, x; res1 = grad),
-                LegacyScenario{:hvp, pl_op}(f, x, (dx,); res1 = grad, res2 = (dg,)),
-                LegacyScenario{:hessian, pl_op}(f, x; res1 = grad, res2 = hess),
-            ],
-        )
-    end
-    for pl_op in (:out,)
-        append!(scens, [LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,))])
-    end
-    return scens
-end
-
 ## Array to array
-
-function all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(f, x, (dx,); res1 = (dy_from_dx,)),
-                LegacyScenario{:pullback, pl_op}(f, x, (dy,); res1 = (dx_from_dy,)),
-                LegacyScenario{:jacobian, pl_op}(f, x; res1 = jac),
-            ],
-        )
-    end
-    return scens
-end
-
-function all_array_to_array_scenarios(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:pushforward, pl_op}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-                LegacyScenario{:pullback, pl_op}(f!, y, x, (dy,); res1 = (dx_from_dy,)),
-                LegacyScenario{:jacobian, pl_op}(f!, y, x; res1 = jac),
-            ],
-        )
-    end
-    return scens
-end
 
 ### Vector to vector
 
@@ -387,30 +154,6 @@ function vec_to_vec_pullback(x, dy)
 end
 vec_to_vec_jacobian(x) = vcat(Diagonal(cos.(x)), Diagonal(-sin.(x)))
 
-function vec_to_vec_scenarios_onearg(
-        x::AbstractVector; dx::AbstractVector, dy::AbstractVector
-    )
-    f = vec_to_vec
-    dy_from_dx = vec_to_vec_pushforward(x, dx)
-    dx_from_dy = vec_to_vec_pullback(x, dy)
-    jac = vec_to_vec_jacobian(x)
-
-    return all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
-function vec_to_vec_scenarios_twoarg(
-        x::AbstractVector; dx::AbstractVector, dy::AbstractVector
-    )
-    f! = vec_to_vec!
-    y = similar(vec_to_vec(x))
-    f!(y, x)
-    dy_from_dx = vec_to_vec_pushforward(x, dx)
-    dx_from_dy = vec_to_vec_pullback(x, dy)
-    jac = vec_to_vec_jacobian(x)
-
-    return all_array_to_array_scenarios(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
 ### Vector to matrix
 
 vec_to_mat(x::AbstractVector)::AbstractMatrix = hcat(sin.(x), cos.(x))
@@ -424,30 +167,6 @@ end
 vec_to_mat_pushforward(x, dx) = hcat(cos.(x) .* dx, -sin.(x) .* dx)
 vec_to_mat_pullback(x, dy) = conj(cos.(x)) .* dy[:, 1] .- conj(sin.(x)) .* dy[:, 2]
 vec_to_mat_jacobian(x) = vcat(Diagonal(cos.(x)), Diagonal(-sin.(x)))
-
-function vec_to_mat_scenarios_onearg(
-        x::AbstractVector; dx::AbstractVector, dy::AbstractMatrix
-    )
-    f = vec_to_mat
-    dy_from_dx = vec_to_mat_pushforward(x, dx)
-    dx_from_dy = vec_to_mat_pullback(x, dy)
-    jac = vec_to_mat_jacobian(x)
-
-    return all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
-function vec_to_mat_scenarios_twoarg(
-        x::AbstractVector; dx::AbstractVector, dy::AbstractMatrix
-    )
-    f! = vec_to_mat!
-    y = similar(vec_to_mat(x))
-    f!(y, x)
-    dy_from_dx = vec_to_mat_pushforward(x, dx)
-    dx_from_dy = vec_to_mat_pullback(x, dy)
-    jac = vec_to_mat_jacobian(x)
-
-    return all_array_to_array_scenarios(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
 
 ### Matrix to vector
 
@@ -471,30 +190,6 @@ end
 
 mat_to_vec_jacobian(x) = vcat(Diagonal(vec(cos.(x))), Diagonal(vec(-sin.(x))))
 
-function mat_to_vec_scenarios_onearg(
-        x::AbstractMatrix; dx::AbstractMatrix, dy::AbstractVector
-    )
-    f = mat_to_vec
-    dy_from_dx = mat_to_vec_pushforward(x, dx)
-    dx_from_dy = mat_to_vec_pullback(x, dy)
-    jac = mat_to_vec_jacobian(x)
-
-    return all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
-function mat_to_vec_scenarios_twoarg(
-        x::AbstractMatrix; dx::AbstractMatrix, dy::AbstractVector
-    )
-    f! = mat_to_vec!
-    y = similar(mat_to_vec(x))
-    f!(y, x)
-    dy_from_dx = mat_to_vec_pushforward(x, dx)
-    dx_from_dy = mat_to_vec_pullback(x, dy)
-    jac = mat_to_vec_jacobian(x)
-
-    return all_array_to_array_scenarios(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
 ### Matrix to matrix
 
 mat_to_mat(x::AbstractMatrix)::AbstractMatrix = hcat(vec(sin.(x)), vec(cos.(x)))
@@ -517,141 +212,7 @@ end
 
 mat_to_mat_jacobian(x) = vcat(Diagonal(vec(cos.(x))), Diagonal(vec(-sin.(x))))
 
-function mat_to_mat_scenarios_onearg(
-        x::AbstractMatrix; dx::AbstractMatrix, dy::AbstractMatrix
-    )
-    f = mat_to_mat
-    dy_from_dx = mat_to_mat_pushforward(x, dx)
-    dx_from_dy = mat_to_mat_pullback(x, dy)
-    jac = mat_to_mat_jacobian(x)
-
-    return all_array_to_array_scenarios(f, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
-function mat_to_mat_scenarios_twoarg(
-        x::AbstractMatrix; dx::AbstractMatrix, dy::AbstractMatrix
-    )
-    f! = mat_to_mat!
-    y = similar(mat_to_mat(x))
-    f!(y, x)
-    dy_from_dx = mat_to_mat_pushforward(x, dx)
-    dx_from_dy = mat_to_mat_pullback(x, dy)
-    jac = mat_to_mat_jacobian(x)
-
-    return all_array_to_array_scenarios(f!, y, x; dx, dy, dy_from_dx, dx_from_dy, jac)
-end
-
 ## Gather
-
-"""
-    legacy_default_scenarios()
-
-Create a vector of [`LegacyScenario`](@ref)s with standard array types.
-
-Only used by the array type extensions until they are ported to call-based scenarios.
-"""
-function legacy_default_scenarios(;
-        linalg = true,
-        include_normal = true,
-        include_batchified = true,
-        include_closurified = false,
-        include_constantified = false,
-        include_cachified = false,
-        include_constantorcachified = false,
-        use_tuples = false,
-        include_smaller = false,
-    )
-    x_ = 0.42
-    dx_ = 3.14
-    dy_ = -1 / 12
-
-    x_6 = float.(1:6)
-    dx_6 = float.(-1:-1:-6)
-
-    x_2_3 = float.(reshape(1:6, 2, 3))
-    dx_2_3 = float.(reshape(-1:-1:-6, 2, 3))
-
-    dy_2 = [-3.0, 4.0]
-    dy_6 = float.(-5:2:5)
-    dy_12 = float.(-11:2:11)
-    dy_2_2 = [-3.0 4.0; 7.0 -1.0]
-    dy_2_3 = float.(reshape(-5:2:5, 2, 3))
-    dy_6_2 = float.(reshape(-11:2:11, 6, 2))
-
-    scens = vcat(
-        # one argument
-        num_to_num_scenarios(x_; dx = dx_, dy = dy_),
-        onevec_to_onevec_scenarios_onearg(x_; dx = dx_, dy = dy_),
-        num_to_vec_scenarios_onearg(x_; dx = dx_, dy = dy_2),
-        num_to_mat_scenarios_onearg(x_; dx = dx_, dy = dy_2_2),
-        arr_to_num_scenarios_onearg(x_6; dx = dx_6, dy = dy_, linalg),
-        arr_to_num_scenarios_onearg(x_2_3; dx = dx_2_3, dy = dy_, linalg),
-        vec_to_vec_scenarios_onearg(x_6; dx = dx_6, dy = dy_12),
-        vec_to_mat_scenarios_onearg(x_6; dx = dx_6, dy = dy_6_2),
-        mat_to_vec_scenarios_onearg(x_2_3; dx = dx_2_3, dy = dy_12),
-        mat_to_mat_scenarios_onearg(x_2_3; dx = dx_2_3, dy = dy_6_2),
-        # two arguments
-        onevec_to_onevec_scenarios_twoarg(x_; dx = dx_, dy = dy_),
-        num_to_vec_scenarios_twoarg(x_; dx = dx_, dy = dy_6),
-        num_to_mat_scenarios_twoarg(x_; dx = dx_, dy = dy_6_2),
-        vec_to_vec_scenarios_twoarg(x_6; dx = dx_6, dy = dy_12),
-        vec_to_mat_scenarios_twoarg(x_6; dx = dx_6, dy = dy_6_2),
-        mat_to_vec_scenarios_twoarg(x_2_3; dx = dx_2_3, dy = dy_12),
-        mat_to_mat_scenarios_twoarg(x_2_3; dx = dx_2_3, dy = dy_6_2),
-    )
-
-    smallerscens = vcat(
-        # one argument
-        num_to_num_scenarios(x_; dx = dx_, dy = dy_),
-        onevec_to_onevec_scenarios_onearg(x_; dx = dx_, dy = dy_),
-        num_to_vec_scenarios_onearg(x_; dx = dx_, dy = dy_2),
-        num_to_mat_scenarios_onearg(x_; dx = dx_, dy = dy_2_2),
-        arr_to_num_scenarios_onearg(x_6[1:3]; dx = dx_6[1:3], dy = dy_, linalg),
-        arr_to_num_scenarios_onearg(x_2_3[1:1, 1:2]; dx = dx_2_3[1:1, 1:2], dy = dy_, linalg),
-        vec_to_vec_scenarios_onearg(x_6[1:3]; dx = dx_6[1:3], dy = dy_12[1:6]),
-        vec_to_mat_scenarios_onearg(x_6[1:3]; dx = dx_6[1:3], dy = dy_6_2[1:3, :]),
-        mat_to_vec_scenarios_onearg(x_2_3[1:1, 1:2]; dx = dx_2_3[1:1, 1:2], dy = dy_12[1:4]),
-        mat_to_mat_scenarios_onearg(
-            x_2_3[1:1, 1:2]; dx = dx_2_3[1:1, 1:2], dy = dy_6_2[1:2, :]
-        ),
-        # two arguments
-        onevec_to_onevec_scenarios_twoarg(x_; dx = dx_, dy = dy_),
-        num_to_vec_scenarios_twoarg(x_; dx = dx_, dy = dy_6[1:3]),
-        num_to_mat_scenarios_twoarg(x_; dx = dx_, dy = dy_6_2[1:3, :]),
-        vec_to_vec_scenarios_twoarg(x_6[1:3]; dx = dx_6[1:3], dy = dy_12[1:6]),
-        vec_to_mat_scenarios_twoarg(x_6[1:3]; dx = dx_6[1:3], dy = dy_6_2[1:3, :]),
-        mat_to_vec_scenarios_twoarg(x_2_3[1:1, 1:2]; dx = dx_2_3[1:1, 1:2], dy = dy_12[1:4]),
-        mat_to_mat_scenarios_twoarg(
-            x_2_3[1:1, 1:2]; dx = dx_2_3[1:1, 1:2], dy = dy_6_2[1:2, :]
-        ),
-    )
-
-    scens_smaller_prep = map(scens, smallerscens) do s1, s2
-        LegacyScenario{operator(s1), operator_place(s1), function_place(s1)}(;
-            f = s1.f,
-            y = s1.y,
-            x = s1.x,
-            t = s1.t,
-            contexts = s1.contexts,
-            res1 = s1.res1,
-            res2 = s1.res2,
-            name = isnothing(s1.name) ? nothing : s1.name * " [smaller prep]",
-            prep_args = s2.prep_args,
-        )
-    end
-
-    include_batchified && append!(scens, batchify(scens))
-
-    final_scens = LegacyScenario[]
-    include_normal && append!(final_scens, scens)
-    include_closurified && append!(final_scens, closurify(scens))
-    include_constantified && append!(final_scens, constantify(scens))
-    include_cachified && append!(final_scens, cachify(scens; use_tuples = use_tuples))
-    include_constantorcachified && append!(final_scens, constantorcachify(scens))
-    include_smaller && append!(final_scens, scens_smaller_prep)
-
-    return final_scens
-end
 
 ## Call-based scenarios
 

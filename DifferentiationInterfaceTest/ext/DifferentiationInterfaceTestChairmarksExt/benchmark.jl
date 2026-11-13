@@ -1,10 +1,10 @@
-@kwdef struct TripleBenchmarkResult
+@kwdef struct BenchmarkResult
     prepared::Benchmark = failed_bench()
     preparation::Benchmark = failed_bench()
     unprepared::Benchmark = failed_bench()
 end
 
-@kwdef struct TripleCallsResult
+@kwdef struct CallsResult
     prepared::Int = -1
     preparation::Int = -1
     unprepared::Int = -1
@@ -21,9 +21,9 @@ function benchmark_triple(
     if subset == :full
         preparation = @be f_prep(args_prep...) seconds = seconds
         unprepared = @be f_unprep(args_unprep...) seconds = seconds
-        return TripleBenchmarkResult(; prepared, preparation, unprepared)
+        return BenchmarkResult(; prepared, preparation, unprepared)
     else
-        return TripleBenchmarkResult(; prepared)
+        return BenchmarkResult(; prepared)
     end
 end
 
@@ -52,7 +52,7 @@ function count_calls_triple(backend::AbstractADType, ts::DIT.TripleScenario)
     f_unprep, args_unprep = calls.unprepared
     f_unprep(args_unprep...)
     unprepared = reset_count!(new_cc)
-    return TripleCallsResult(; prepared, preparation, unprepared)
+    return CallsResult(; prepared, preparation, unprepared)
 end
 
 function DIT.run_benchmark!(
@@ -75,7 +75,7 @@ function DIT.run_benchmark!(
     catch exception
         bench_success = false
         logging && @warn "Error during benchmarking" backend ts exception
-        TripleBenchmarkResult()
+        BenchmarkResult()
     end
     benchmark_test && @test bench_success
 
@@ -86,11 +86,11 @@ function DIT.run_benchmark!(
         catch exception
             count_success = false
             logging && @warn "Error during call counting" backend ts exception
-            TripleCallsResult()
+            CallsResult()
         end
         benchmark_test && @test count_success
     else
-        calls_result = TripleCallsResult()
+        calls_result = CallsResult()
     end
 
     record!(
