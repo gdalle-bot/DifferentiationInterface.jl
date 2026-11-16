@@ -38,6 +38,9 @@ LOGGING = get(ENV, "CI", "false") == "false"
             include("basics/operators.jl")
             include("basics/result.jl")
             include("basics/utils.jl")
+            include("basics/scenario.jl")
+            include("basics/triple.jl")
+            include("basics/variants.jl")
         end
     end
 
