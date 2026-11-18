@@ -188,7 +188,8 @@ end
     mismatched = map(s -> DIT.mismatch(s; kind), scens)
     @test all(DIT.is_mismatch, mismatched)
     counts = correctness_counts(AutoForwardDiff(), mismatched)
-    @test counts == (; passes = 2 * length(scens), failures = 0)
+    # preparation type, mismatch error, scenario intact
+    @test counts == (; passes = 3 * length(scens), failures = 0)
     @test_throws ArgumentError DIT.mismatch(first(scens); kind = :other)
 end
 
