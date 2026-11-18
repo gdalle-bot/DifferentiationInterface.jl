@@ -99,7 +99,7 @@ using PrecompileTools: @compile_workload
 using ProgressMeter: ProgressUnknown, next!
 using Random: AbstractRNG, default_rng, rand!
 using SparseArrays:
-    SparseArrays, AbstractSparseMatrix, SparseMatrixCSC, nnz, sparse, spdiagm
+    SparseArrays, AbstractSparseMatrix, SparseMatrixCSC, findnz, nnz, sparse, spdiagm
 using Tables: Tables, AbstractRow, AbstractColumns
 using Test: @testset, @test, @test_throws
 
@@ -146,6 +146,7 @@ include("scenarios/allocfree.jl")
 include("scenarios/empty.jl")
 include("scenarios/extensions.jl")
 
+include("tests/correctness.jl")
 include("tests/correctness_eval.jl")
 include("tests/counterparts.jl")
 include("tests/prep_eval.jl")
