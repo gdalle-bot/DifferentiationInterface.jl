@@ -28,11 +28,17 @@ f_arr_hess(x, c) = [2c x[3] x[2]; x[3] 2c x[1]; x[2] x[1] 2c]
 f_vec!(y, x, c) = (y .= c .* x .^ 2; nothing)
 f_vec_jac(x, c) = Matrix(spdiagm(2c .* x))
 
+g_num(x::Number, c) = sin(c * x)
+g_num_der(x, c) = c * cos(c * x)
+g_num_der2(x, c) = -c^2 * sin(c * x)
+
 c = 3.0
 x_num = 0.5
 x = [1.0, 2.0, 3.0]
 tx = ([1.0, 0.0, -1.0], [0.0, 2.0, 1.0])
 ty = ([1.0, 1.0, 0.0], [0.0, -1.0, 2.0])
+tx_num = (1.0, -2.0)
+ty_num = ([1.0, 0.0], [2.0, -1.0])
 
 canonical_scenarios = [
     (
@@ -77,13 +83,39 @@ canonical_scenarios = [
     ),
 ]
 
-# all outputs are arrays
-all_scenarios = mapreduce(s -> DIT.all_variants(s; include_inplace = true), vcat, canonical_scenarios)
+# all outputs are numbers
+canonical_scenarios_num = [
+    (
+        @scenario value_and_derivative(g_num, missing, x_num, Constant(c)) Result(
+            g_num(x_num, c), g_num_der(x_num, c), nothing
+        )
+    ),
+    (
+        @scenario value_derivative_and_second_derivative(g_num, missing, x_num, Constant(c)) Result(
+            g_num(x_num, c), g_num_der(x_num, c), g_num_der2(x_num, c)
+        )
+    ),
+    (
+        @scenario value_and_pushforward(f_arr, missing, x, tx, Constant(c)) Result(
+            f_arr(x, c), map(dx -> sum(f_arr_grad(x, c) .* dx), tx), nothing
+        )
+    ),
+    (
+        @scenario value_and_pullback(f_num, missing, x_num, ty_num, Constant(c)) Result(
+            f_num(x_num, c), map(dy -> sum(f_num_der(x_num, c) .* dy), ty_num), nothing
+        )
+    ),
+]
+
+all_scenarios = vcat(
+    mapreduce(s -> DIT.all_variants(s; include_inplace = true), vcat, canonical_scenarios),
+    mapreduce(s -> DIT.all_variants(s; include_inplace = false), vcat, canonical_scenarios_num),
+)
 
 n_candidates(op) = DIT.needs_tangent(op) ? 4 : 3
 
 @testset "Correct scenarios" begin
-    @test length(all_scenarios) == 8 * 4
+    @test length(all_scenarios) == 8 * 4 + 4 * 2
     @test sort(unique(map(DIT.operator_symbol ∘ DIT.operator, all_scenarios))) ==
         sort(vcat(DIT.FIRST_ORDER, DIT.SECOND_ORDER))
     @testset "$s" for s in all_scenarios
@@ -178,12 +210,20 @@ end
     counts = count_tests() do
         DIT.test_correctness(backend, TripleScenario(exec; prep, mismatch = true); kwargs...)
     end
-    @test counts == (; passes = 2, failures = 0)
+    @test counts.failures == 0
+    @test counts.passes > 0
+    # the mismatch is also detected when repreparation is requested
+    counts_noreprep = count_tests() do
+        DIT.test_correctness(
+            backend, TripleScenario(exec; prep, mismatch = true); kwargs..., reprepare = false
+        )
+    end
+    @test counts_noreprep == counts
     # a scenario wrongly declared as a mismatch is detected
     counts = count_tests() do
         DIT.test_correctness(backend, TripleScenario(exec; mismatch = true); kwargs...)
     end
-    @test counts == (; passes = 1, failures = 1)
+    @test counts.failures == 1
 end
 
 ## Missing reference
@@ -214,6 +254,22 @@ end
         DIT.test_correctness(backend, TripleScenario(s); kwargs..., scenario_intact = false)
     end
     @test counts.failures == 0
+end
+
+function f_cache(x, c)
+    c .= x  # caches may be mutated
+    return sum(abs2, c)
+end
+
+@testset "Scenario intact with Cache" begin
+    s = @scenario value_and_gradient(f_cache, missing, x, Cache(similar(x))) Result(
+        sum(abs2, x), 2x, nothing
+    )
+    counts = count_tests() do
+        DIT.test_correctness(backend, TripleScenario(s); kwargs...)
+    end
+    @test counts.failures == 0
+    @test counts.passes > 0
 end
 
 ## Sparsity
