@@ -72,36 +72,37 @@ end
 """
     preparation_candidates(backend, ts::TripleScenario; reprepare)
 
-Return a tuple of pairs `kind => prep_tup`, where `prep_tup` contains zero or one preparation result to test the operator with:
+Return a tuple of preparation candidates to test the operator with, each of which is a tuple containing zero or one preparation result:
 
-- `:unprepared`: no preparation;
-- `:strict`: strict preparation on `prep`, possibly adapted to `exec`;
-- `:nonstrict`: non-strict preparation on `prep`, possibly adapted to `exec`;
-- `:same_point`: same-point preparation on `exec`, for operators that take tangents.
+- no preparation;
+- strict preparation on `prep`, possibly adapted to `exec`;
+- non-strict preparation on `prep`, possibly adapted to `exec`;
+- same-point preparation on `exec`, for operators that take tangents.
 
 Tangents are zeroed for repreparation and same-point preparation (see [`zero_tangents`](@ref)).
-Mismatch scenarios are never reprepared, since repreparation would remove the mismatch.
+
+If `ts` is a mismatch scenario, its `exec` scenario is not meant to be executed with anything but a strict preparation on `prep`, so this is the only candidate (without repreparation, which would remove the mismatch).
 """
 function preparation_candidates(backend::AbstractADType, ts::TripleScenario; reprepare::Bool)
     prep_s, exec_s = prep_scenario(ts), zero_tangents(exec_scenario(ts))
     op = operator(ts)
-    do_reprepare = reprepare && !is_mismatch(ts) && should_reprepare(ts)
-    strict_prep, nonstrict_prep = map((Val(true), Val(false))) do strict
+    if is_mismatch(ts)
+        strict_prep = prepare_scenario(prep_s, backend; strict = Val(true))
+        @test strict_prep isa prep_type(op)
+        return ((strict_prep,),)
+    end
+    preps = map((Val(true), Val(false))) do strict
         prep = prepare_scenario(prep_s, backend; strict)
-        do_reprepare ? reprepare_scenario(exec_s, prep, backend) : prep
+        if reprepare && should_reprepare(ts)
+            prep = reprepare_scenario(exec_s, prep, backend)
+        end
+        prep
     end
-    candidates = (
-        :unprepared => (), :strict => (strict_prep,), :nonstrict => (nonstrict_prep,),
-    )
     if needs_tangent(op)
-        candidates = (
-            candidates..., :same_point => (prepare_scenario_same_point(exec_s, backend),),
-        )
+        preps = (preps..., prepare_scenario_same_point(exec_s, backend))
     end
-    foreach(candidates) do (_, prep_tup)
-        foreach(prep -> @test(prep isa prep_type(op)), prep_tup)
-    end
-    return candidates
+    foreach(prep -> @test(prep isa prep_type(op)), preps)
+    return ((), map(tuple, preps)...)
 end
 
 sparsity_pattern(A::AbstractSparseMatrix) = (findnz(A)[1:2], size(A))
@@ -132,7 +133,7 @@ Test the operator of `ts` with every preparation candidate (see [`preparation_ca
 For each candidate, `exec` is executed twice, with a call on `flush` in between when the operator is prepared.
 Each execution is compared to the reference result, and output buffers must be returned as is.
 
-If `ts` is a mismatch scenario, executing with the strict preparation must throw a `PreparationMismatchError` instead, and the non-strict preparation is skipped (its behavior is undefined).
+If `ts` is a mismatch scenario, executing with its only preparation candidate must throw a `PreparationMismatchError` instead.
 """
 function test_correctness(
         backend::AbstractADType,
@@ -152,10 +153,10 @@ function test_correctness(
         throw(ArgumentError("Correctness tests require a reference result for the executed scenario"))
     end
     mismatch = is_mismatch(new_ts)
-    foreach(preparation_candidates(backend, new_ts; reprepare)) do (kind, prep_tup)
-        if mismatch && kind === :strict
+    foreach(preparation_candidates(backend, new_ts; reprepare)) do prep_tup
+        if mismatch
             @test_throws PreparationMismatchError call_scenario(exec_s, prep_tup, backend)
-        elseif !(mismatch && kind === :nonstrict)
+        else
             out1, value_in1, buffers_in1 = call_scenario(exec_s, prep_tup, backend)
             isempty(prep_tup) || call_scenario(flush_s, prep_tup, backend)
             out2, value_in2, buffers_in2 = call_scenario(exec_s, prep_tup, backend)
