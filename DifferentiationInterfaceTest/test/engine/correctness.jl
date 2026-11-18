@@ -207,23 +207,27 @@ end
     prep = Scenario(
         value_and_gradient, OtherFunction(f_arr), (), DIT.post_backend_args(exec)
     )
-    counts = count_tests() do
-        DIT.test_correctness(backend, TripleScenario(exec; prep, mismatch = true); kwargs...)
-    end
-    @test counts.failures == 0
-    @test counts.passes > 0
-    # the mismatch is also detected when repreparation is requested
-    counts_noreprep = count_tests() do
-        DIT.test_correctness(
-            backend, TripleScenario(exec; prep, mismatch = true); kwargs..., reprepare = false
+    # the executed function is not even callable: only strict preparation is tested
+    exec_nothing = Scenario(
+        value_and_gradient, nothing, (), DIT.post_backend_args(exec); result = DIT.result(exec)
+    )
+    @testset for ts in (
+            TripleScenario(exec; prep, mismatch = true),
+            TripleScenario(exec_nothing; prep = DIT.zero_inputs(exec), mismatch = true),
         )
+        for reprepare in (true, false)
+            counts = count_tests() do
+                DIT.test_correctness(backend, ts; kwargs..., reprepare)
+            end
+            # preparation type, mismatch error, scenario intact
+            @test counts == (; passes = 3, failures = 0)
+        end
     end
-    @test counts_noreprep == counts
     # a scenario wrongly declared as a mismatch is detected
     counts = count_tests() do
         DIT.test_correctness(backend, TripleScenario(exec; mismatch = true); kwargs...)
     end
-    @test counts.failures == 1
+    @test counts == (; passes = 2, failures = 1)
 end
 
 ## Missing reference
