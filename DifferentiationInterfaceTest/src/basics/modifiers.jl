@@ -23,15 +23,19 @@ abstract type ScenarioModifier end
 
 applies_to(::ScenarioModifier, ::Scenario) = true
 applies_to(m::ScenarioModifier, ts::TripleScenario) = applies_to(m, exec_scenario(ts))
-modify_func(::ScenarioModifier, f, ::Scenario) = f
-modify_contexts(::ScenarioModifier, contexts::Tuple, ::Scenario) = contexts
+modify_func(::ScenarioModifier, @nospecialize(f), @nospecialize(::Scenario)) = f
+modify_contexts(::ScenarioModifier, @nospecialize(contexts::Tuple), @nospecialize(::Scenario)) = contexts
 modify_tangents(::ScenarioModifier, t) = t
 modify_output(::ScenarioModifier, k::Integer, x) = x
 modify_buffer(::ScenarioModifier, k::Integer, x) = x
 name_suffix(m::ScenarioModifier) = lowercase(string(nameof(typeof(m))))
 
 function modify_scenario(
-        m::ScenarioModifier, s::Scenario, ref::Scenario, new_func; zero_contexts::Bool
+        @nospecialize(m::ScenarioModifier),
+        @nospecialize(s::Scenario),
+        @nospecialize(ref::Scenario),
+        @nospecialize(new_func);
+        zero_contexts::Bool,
     )
     op = operator(s)
     new_value_args = map(y -> modify_buffer(m, 0, y), value_args(s))
@@ -72,14 +76,14 @@ function modify_scenario(
     )
 end
 
-function (m::ScenarioModifier)(s::Scenario)
+function (m::ScenarioModifier)(@nospecialize(s::Scenario))
     if !applies_to(m, s)
         throw(ArgumentError("Modifier `$m` does not apply to scenario `$s`"))
     end
     return modify_scenario(m, s, s, modify_func(m, func(s), s); zero_contexts = false)
 end
 
-function (m::ScenarioModifier)(ts::TripleScenario)
+function (m::ScenarioModifier)(@nospecialize(ts::TripleScenario))
     exec = exec_scenario(ts)
     if !applies_to(m, exec)
         throw(ArgumentError("Modifier `$m` does not apply to scenario `$ts`"))
@@ -131,7 +135,7 @@ struct ChangeFunction{F} <: ScenarioModifier
     f::F
 end
 
-modify_func(m::ChangeFunction, _, ::Scenario) = m.f
+modify_func(m::ChangeFunction, @nospecialize(_), @nospecialize(::Scenario)) = m.f
 name_suffix(::ChangeFunction) = "new function"
 
 change_function(s::AnyNewScenario, new_f) = ChangeFunction(new_f)(s)
@@ -140,7 +144,7 @@ change_function(s::AnyNewScenario, new_f) = ChangeFunction(new_f)(s)
 
 struct Batchify <: ScenarioModifier end
 
-function applies_to(::Batchify, s::Scenario)
+function applies_to(::Batchify, @nospecialize(s::Scenario))
     return needs_tangent(operator(s)) && length(tangents(s)) == 1
 end
 modify_tangents(::Batchify, t::Tuple) = (only(t), -only(t))
@@ -161,10 +165,10 @@ end
 
 Closurify() = Closurify(3.0, [4.0])
 
-function applies_to(::Closurify, s::Scenario)
+function applies_to(::Closurify, @nospecialize(s::Scenario))
     return isempty(contexts(s)) && !isnothing(primal_output(s))
 end
-function modify_func(m::Closurify, f, ref::Scenario)
+function modify_func(m::Closurify, @nospecialize(f), @nospecialize(ref::Scenario))
     x_buffer = [custom_zero(primal_input(ref))]
     y_buffer = [custom_zero(primal_output(ref))]
     return WritableClosure{function_place(ref)}(f, x_buffer, y_buffer, m.a, m.b)
@@ -183,9 +187,9 @@ end
 
 Constantify() = Constantify(3.0)
 
-applies_to(::Constantify, s::Scenario) = isempty(contexts(s))
-modify_func(::Constantify, f, ref::Scenario) = MultiplyByConstant{function_place(ref)}(f)
-modify_contexts(m::Constantify, ::Tuple, ::Scenario) = (Constant(m.a),)
+applies_to(::Constantify, @nospecialize(s::Scenario)) = isempty(contexts(s))
+modify_func(::Constantify, @nospecialize(f), @nospecialize(ref::Scenario)) = MultiplyByConstant{function_place(ref)}(f)
+modify_contexts(m::Constantify, @nospecialize(::Tuple), @nospecialize(::Scenario)) = (Constant(m.a),)
 modify_output(m::Constantify, k::Integer, x) = mymultiply(x, m.a)
 name_suffix(::Constantify) = "constantified"
 
@@ -198,11 +202,11 @@ struct Cachify <: ScenarioModifier
     use_tuples::Bool
 end
 
-function applies_to(::Cachify, s::Scenario)
+function applies_to(::Cachify, @nospecialize(s::Scenario))
     return isempty(contexts(s)) && !isnothing(primal_output(s))
 end
-modify_func(::Cachify, f, ref::Scenario) = StoreInCache{function_place(ref)}(f)
-function modify_contexts(m::Cachify, ::Tuple, ref::Scenario)
+modify_func(::Cachify, @nospecialize(f), @nospecialize(ref::Scenario)) = StoreInCache{function_place(ref)}(f)
+function modify_contexts(m::Cachify, @nospecialize(::Tuple), @nospecialize(ref::Scenario))
     y = primal_output(ref)
     y_cache = y isa Number ? [zero(y)] : similar(y)
     if m.use_tuples
@@ -225,13 +229,13 @@ end
 
 ConstantOrCachify() = ConstantOrCachify(3.0, [4.0])
 
-function applies_to(::ConstantOrCachify, s::Scenario)
+function applies_to(::ConstantOrCachify, @nospecialize(s::Scenario))
     return isempty(contexts(s)) && !isnothing(primal_output(s))
 end
-function modify_func(::ConstantOrCachify, f, ref::Scenario)
+function modify_func(::ConstantOrCachify, @nospecialize(f), @nospecialize(ref::Scenario))
     return MultiplyByConstantAndStoreInCache{function_place(ref)}(f)
 end
-function modify_contexts(m::ConstantOrCachify, ::Tuple, ref::Scenario)
+function modify_contexts(m::ConstantOrCachify, @nospecialize(::Tuple), @nospecialize(ref::Scenario))
     y = primal_output(ref)
     cache = y isa Number ? [zero(y)] : similar(y)
     return (ConstantOrCache((; cache, constant = (; m.a, b = copy(m.b)))),)
@@ -257,7 +261,7 @@ Return a [`TripleScenario`](@ref) whose execution is incompatible with its (defa
 
 Preparation is done with the original function and input types, so that it does not need to be compiled again.
 """
-function mismatch(s::Scenario; kind::Symbol = :function)
+function mismatch(@nospecialize(s::Scenario); kind::Symbol = :function)
     new_func, new_post = if kind == :function
         nothing, post_backend_args(s)
     elseif kind == :input
@@ -294,7 +298,7 @@ has_matrix(ts::TripleScenario) = has_matrix(exec_scenario(ts))
 
 Return a scenario identical to `s` but whose reference result is computed with `backend`, using the operator with value in the family of `s`.
 """
-function compute_results(s::Scenario, backend::AbstractADType)
+function compute_results(@nospecialize(s::Scenario), backend::AbstractADType)
     op = outofplace(with_value(operator(s)))
     new_s = deepcopy(s)
     output = op(
