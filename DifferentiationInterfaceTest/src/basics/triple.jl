@@ -5,13 +5,13 @@ Return a scenario with the same operator and function as `s`, where every argume
 
 The result is set to `nothing`, since the zeroed scenario is only used for preparation and flushing.
 The function is shared with `s`, because preparation may be tied to the function object.
-The output buffers are kept, because they are never read and their structure (e.g. a sparsity pattern) may matter.
+The output buffers are put through `mysimilar` instead, because they are never read and their structure (e.g. a sparsity pattern) may matter.
 """
 function zero_inputs(@nospecialize(s::Scenario))
     return Scenario(
         operator(s),
         func(s),
-        (map(custom_zero, value_args(s))..., output_buffers(s)...),
+        (map(custom_zero, value_args(s))..., map(mysimilar, output_buffers(s))...),
         map(custom_zero, post_backend_args(s));
         result = nothing,
         name = nothing,
