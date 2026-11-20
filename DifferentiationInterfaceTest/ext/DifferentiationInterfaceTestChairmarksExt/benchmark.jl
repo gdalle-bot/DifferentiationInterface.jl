@@ -29,11 +29,11 @@ function benchmark_triple(
 end
 
 """
-    count_calls(f, args)
+    call_count((f, args))
 
 Call `f(args...)` and return the number of times that the `CallCounter` in first position of `args` was called.
 """
-function count_calls((f, args))
+function call_count((f, args))
     cc = first(args)
     reset_count!(cc)
     f(args...)
@@ -59,9 +59,9 @@ function count_calls_triple(backend::AbstractADType, ts::DIT.TripleScenario)
     # `prepared_calls` makes a deep copy, which preserves the sharing of counters
     calls = DIT.prepared_calls(backend, new_ts)
     return TripleCallsResult(;
-        preparation = count_calls(calls.preparation),
-        prepared = count_calls(calls.prepared),
-        unprepared = count_calls(calls.unprepared),
+        preparation = call_count(calls.preparation),
+        prepared = call_count(calls.prepared),
+        unprepared = call_count(calls.unprepared),
     )
 end
 

@@ -139,9 +139,9 @@ end
         empty!(CALLS)
         ts = TripleScenario(exec; prep = Scenario(value_and_jacobian, prep_f, (), (zero(x),)))
         data = benchmark_differentiation(
-            AutoFiniteDiff(), [ts]; benchmark = :full, benchmark_seconds = 0.01, logging = false
+            AutoFiniteDiff(; fdjtype = Val(:forward)), [ts]; benchmark = :full, benchmark_seconds = 0.01, logging = false
         ) |> DataFrame
-        # finite differences: one call for the value, one per input dimension
+        # forward differences: one call for the value, one per input dimension
         @test data[!, :calls] == [3, 1, 4]  # prepared, preparation, unprepared
         # preparation is done with the function of the preparation scenario
         @test haskey(CALLS, prep_f.tag)
