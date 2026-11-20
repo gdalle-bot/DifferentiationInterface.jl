@@ -45,7 +45,9 @@ end
 @testset "Weird arrays" begin
     test_differentiation(
         [AutoZeroForward(), AutoZeroReverse()],
-        zero.(vcat(component_scenarios(), static_scenarios(), gpu_scenarios()));
+        DifferentiationInterfaceTest.zero_der(
+            vcat(component_scenarios(), static_scenarios(), gpu_scenarios())
+        );
         correctness = true,
         logging = LOGGING,
     )

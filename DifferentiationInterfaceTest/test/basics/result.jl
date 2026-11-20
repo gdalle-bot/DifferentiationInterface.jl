@@ -19,6 +19,23 @@ approx_kwargs = (; isapprox, atol = 0, rtol = 1.0e-8)
     )
 end
 
+# number type which cannot be promoted with an expression, like `Tracker.TrackedReal`
+struct Unpromotable <: Real
+    x::Float64
+end
+Base.promote_rule(::Type{Unpromotable}, ::Type{Expr}) = error("cannot promote")
+Base.isapprox(a::Unpromotable, b::Real; kwargs...) = isapprox(a.x, b; kwargs...)
+
+@testset "Unpromotable numbers" begin
+    reference = Result(1.0, [2.0], nothing)
+    @test count_tests(
+        () -> DIT.test_approx(
+            value_and_gradient, Result(Unpromotable(1.0), [2.0], nothing), reference;
+            approx_kwargs...
+        )
+    ) == (; passes = 2, failures = 0)
+end
+
 @testset "Only returned orders are compared" begin
     reference = Result(1.0, [2.0], nothing)
     wrong_value = Result(-1.0, [2.0], nothing)

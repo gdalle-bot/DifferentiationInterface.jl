@@ -137,7 +137,8 @@ struct ChangeFunction{F} <: ScenarioModifier
     f::F
 end
 
-modify_func(m::ChangeFunction, @nospecialize(_), @nospecialize(::Scenario)) = m.f
+# the `nothing` function of mismatch scenarios is kept, so that they remain mismatched
+modify_func(m::ChangeFunction, @nospecialize(f), @nospecialize(::Scenario)) = isnothing(f) ? f : m.f
 name_suffix(::ChangeFunction) = "new function"
 
 change_function(s::AnyNewScenario, new_f) = ChangeFunction(new_f)(s)

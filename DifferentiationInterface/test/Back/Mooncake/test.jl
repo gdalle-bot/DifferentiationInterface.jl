@@ -8,7 +8,7 @@ using Test
 using ExplicitImports
 check_no_implicit_imports(DifferentiationInterface)
 
-nomatrix(scens) = filter(s -> !(s.x isa AbstractMatrix) && !(s.y isa AbstractMatrix), scens)
+nomatrix(scens) = filter(!DifferentiationInterfaceTest.has_matrix, scens)
 
 backends = [
     AutoMooncake(),

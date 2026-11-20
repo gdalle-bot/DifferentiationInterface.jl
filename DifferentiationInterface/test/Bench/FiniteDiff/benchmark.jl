@@ -16,8 +16,8 @@ using StaticArrays: @SVector
     filtered_sparse_scenarios = filter(sparse_scenarios(; band_sizes = [])) do scen
         DIT.function_place(scen) == :in &&
             DIT.operator_place(scen) == :in &&
-            scen.x isa AbstractVector &&
-            scen.y isa AbstractVector
+            DIT.primal_input(scen) isa AbstractVector &&
+            DIT.primal_output(scen) isa AbstractVector
     end
 
     data = benchmark_differentiation(

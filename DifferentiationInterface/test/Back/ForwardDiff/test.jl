@@ -70,7 +70,6 @@ end
     test_differentiation(
         MyAutoSparse(AutoForwardDiff()),
         sparse_scenarios(; include_constantified = true);
-        sparsity = true,
         logging = LOGGING,
     )
 end
