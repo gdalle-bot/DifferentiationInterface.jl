@@ -109,7 +109,7 @@ using SparseArrays:
     sparse,
     spdiagm
 using Tables: Tables, AbstractRow, AbstractColumns
-using Test: @testset, @test, @test_throws
+using Test: Test, @testset, @test, @test_throws
 
 """
     FIRST_ORDER = [:pushforward, :pullback, :derivative, :gradient, :jacobian]
@@ -154,6 +154,7 @@ include("scenarios/allocfree.jl")
 include("scenarios/empty.jl")
 include("scenarios/extensions.jl")
 
+include("tests/counting.jl")
 include("tests/correctness.jl")
 include("tests/correctness_eval.jl")
 include("tests/counterparts.jl")
@@ -161,6 +162,7 @@ include("tests/prep_eval.jl")
 include("tests/type_stability.jl")
 include("tests/benchmark.jl")
 include("tests/allocs_eval.jl")
+include("tests/allocations.jl")
 
 include("test_differentiation.jl")
 
