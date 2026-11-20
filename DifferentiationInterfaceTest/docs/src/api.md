@@ -12,12 +12,11 @@ DifferentiationInterfaceTest
 ## Entry points
 
 ```@docs
-compute_results
 test_differentiation
 benchmark_differentiation
 ```
 
-## Call-based scenarios
+## Scenarios
 
 ```@docs
 Scenario
@@ -25,6 +24,7 @@ Scenario
 Result
 TripleScenario
 custom_zero
+compute_results
 ```
 
 ## Utilities
