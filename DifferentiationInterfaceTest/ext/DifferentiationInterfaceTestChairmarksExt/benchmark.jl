@@ -13,6 +13,7 @@ end
 function benchmark_triple(
         backend::AbstractADType, ts::DIT.TripleScenario; subset::Symbol, seconds::Real
     )
+    @assert subset in (:prepared, :full)
     calls = DIT.prepared_calls(backend, ts)
     f_prep, args_prep = calls.preparation
     f_unprep, args_unprep = calls.unprepared
@@ -27,32 +28,41 @@ function benchmark_triple(
     end
 end
 
+"""
+    call_count((f, args))
+
+Call `f(args...)` and return the number of times that the `CallCounter` in first position of `args` was called.
+"""
+function call_count((f, args))
+    cc = first(args)
+    reset_count!(cc)
+    f(args...)
+    return reset_count!(cc)
+end
+
 function count_calls_triple(backend::AbstractADType, ts::DIT.TripleScenario)
-    exec_s = DIT.exec_scenario(ts)
-    cc = CallCounter(DIT.func(exec_s))
-    with_counter(s) = DIT.Scenario(
-        DIT.operator(s), cc, DIT.pre_backend_args(s), DIT.post_backend_args(s);
-        result = DIT.result(s), name = DIT.name(s),
-    )
+    # each distinct function gets its own counter, and identical functions share one
+    counters = IdDict{Any, CallCounter}()
+    # TODO: use the new version of `change_function` here
+    function with_counter(s)
+        cc = get!(() -> CallCounter(DIT.func(s)), counters, DIT.func(s))
+        return DIT.Scenario(
+            DIT.operator(s), cc, DIT.pre_backend_args(s), DIT.post_backend_args(s);
+            result = DIT.result(s), name = DIT.name(s),
+        )
+    end
     new_ts = DIT.TripleScenario(
-        with_counter(exec_s);
+        with_counter(DIT.exec_scenario(ts));
         prep = with_counter(DIT.prep_scenario(ts)),
         flush = with_counter(DIT.flush_scenario(ts)),
     )
+    # `prepared_calls` makes a deep copy, which preserves the sharing of counters
     calls = DIT.prepared_calls(backend, new_ts)
-    # `prepared_calls` makes a deep copy of the counter
-    new_cc = first(last(calls.preparation))
-    reset_count!(new_cc)
-    f_prep, args_prep = calls.preparation
-    f_prep(args_prep...)
-    preparation = reset_count!(new_cc)
-    f, args = calls.prepared
-    f(args...)
-    prepared = reset_count!(new_cc)
-    f_unprep, args_unprep = calls.unprepared
-    f_unprep(args_unprep...)
-    unprepared = reset_count!(new_cc)
-    return CallsResult(; prepared, preparation, unprepared)
+    return CallsResult(;
+        preparation = call_count(calls.preparation),
+        prepared = call_count(calls.prepared),
+        unprepared = call_count(calls.unprepared),
+    )
 end
 
 function DIT.run_benchmark!(
@@ -66,7 +76,7 @@ function DIT.run_benchmark!(
         benchmark_seconds::Real,
         benchmark_aggregation,
     )
-    @assert subset in (:full, :prepared)
+    subset == :none && return nothing
     op = DIT.operator(ts)
 
     bench_success = true

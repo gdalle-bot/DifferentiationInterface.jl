@@ -16,7 +16,7 @@ function prepared_calls(backend::AbstractADType, ts::TripleScenario)
     op = operator(exec_s)
     preparation = (
         preparator(op),
-        (func(prep_s), value_args(prep_s)..., backend, post_backend_args(prep_s)...),
+        (func(prep_s), map(mysimilar, value_args(prep_s))..., backend, post_backend_args(prep_s)...),
     )
     prep = prepare_scenario(prep_s, backend; strict = Val(true))
     if should_reprepare(new_ts)
@@ -35,6 +35,7 @@ end
 Check with AllocCheck.jl that the calls of `ts` cannot allocate: the prepared operator (if `subset` is `:prepared` or `:full`), the unprepared operator and the preparation (if `subset` is `:full`).
 """
 function test_alloccheck(backend::AbstractADType, ts::TripleScenario; subset::Symbol, skip::Bool)
+    subset == :none && return nothing
     calls = prepared_calls(backend, ts)
     if subset == :full
         test_noallocs(skip, first(calls.preparation), last(calls.preparation)...)
