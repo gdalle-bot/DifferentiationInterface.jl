@@ -1,9 +1,9 @@
-using Test
-
 """
     CountingTestSet
 
 Test set which counts passes and failures instead of reporting them, to check that a testing function detects errors.
+
+Used in the test suite of DifferentiationInterfaceTest.
 
 Nested test sets of the default type inherit this type and add their counts to their parent.
 """

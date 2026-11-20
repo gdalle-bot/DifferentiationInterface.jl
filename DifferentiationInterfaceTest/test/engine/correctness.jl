@@ -10,7 +10,7 @@ using SparseConnectivityTracer
 using SparseMatrixColorings
 using Test
 
-include("../basics/counting_testset.jl")
+using DifferentiationInterfaceTest: count_tests
 
 kwargs = (; isapprox, atol = 0, rtol = 1.0e-8, scenario_intact = true, reprepare = true)
 backend = AutoForwardDiff()
