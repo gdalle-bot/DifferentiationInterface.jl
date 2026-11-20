@@ -1,3 +1,40 @@
+## Helpers
+
+"""
+    sparse_prep_input(x)
+
+Input on which sparse scenarios are prepared, with nonzero values distinct from those of `x`.
+"""
+sparse_prep_input(x) = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
+
+"""
+    with_prep_input(s::Scenario, x_prep)
+
+Return a [`TripleScenario`](@ref) executing `s`, whose preparation has primal input `x_prep` (and zeros elsewhere).
+"""
+function with_prep_input(@nospecialize(s::Scenario), x_prep)
+    prep = zero_inputs(s)
+    prep = Scenario(
+        operator(prep),
+        func(prep),
+        pre_backend_args(prep),
+        (x_prep, Base.tail(post_backend_args(prep))...),
+    )
+    return TripleScenario(s; prep)
+end
+
+function sparse_jacobian_canonical(f, f!, x; jac)
+    y = f(x)
+    return [
+        canonical_scenario(value_and_jacobian, f, x; res1 = jac) => true,
+        canonical_scenario!(value_and_jacobian, f!, y, x; res1 = jac) => true,
+    ]
+end
+
+function sparse_triples(canonical::AbstractVector, x_prep)
+    return TripleScenario[with_prep_input(v, x_prep) for p in canonical for v in tagged_variants(p)]
+end
+
 ## Vector to vector
 
 diffsquare(x::AbstractVector)::AbstractVector = diff(x) .^ 2
@@ -30,27 +67,9 @@ function diffcube_jacobian(x)
 end
 
 function sparse_vec_to_vec_scenarios(x::AbstractVector)
-    f = diffsquare
-    f! = diffsquare!
-    y = f(x)
-    jac = diffsquare_jacobian(x)
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:jacobian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = jac
-                ),
-                LegacyScenario{:jacobian, pl_op}(
-                    f!, y, x; prep_args = (; y = zero(y), x = x_prep, contexts = ()), res1 = jac
-                ),
-            ],
-        )
-    end
-    return scens
+    return sparse_triples(
+        sparse_jacobian_canonical(diffsquare, diffsquare!, x; jac = diffsquare_jacobian(x)), sparse_prep_input(x)
+    )
 end
 
 ## Matrix to vector
@@ -71,27 +90,9 @@ function diffsquarecube_matvec_jacobian(x)
 end
 
 function sparse_mat_to_vec_scenarios(x::AbstractMatrix)
-    f = diffsquarecube_matvec
-    f! = diffsquarecube_matvec!
-    y = f(x)
-    jac = diffsquarecube_matvec_jacobian(x)
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:jacobian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = jac
-                ),
-                LegacyScenario{:jacobian, pl_op}(
-                    f!, y, x; prep_args = (; y = zero(y), x = x_prep, contexts = ()), res1 = jac
-                ),
-            ],
-        )
-    end
-    return scens
+    return sparse_triples(
+        sparse_jacobian_canonical(diffsquarecube_matvec, diffsquarecube_matvec!, x; jac = diffsquarecube_matvec_jacobian(x)), sparse_prep_input(x)
+    )
 end
 
 ## Vector to matrix
@@ -109,27 +110,9 @@ function diffsquarecube_vecmat_jacobian(x::AbstractVector)
 end
 
 function sparse_vec_to_mat_scenarios(x::AbstractVector)
-    f = diffsquarecube_vecmat
-    f! = diffsquarecube_vecmat!
-    y = f(x)
-    jac = diffsquarecube_vecmat_jacobian(vec(x))
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:jacobian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = jac
-                ),
-                LegacyScenario{:jacobian, pl_op}(
-                    f!, y, x; prep_args = (; y = zero(y), x = x_prep, contexts = ()), res1 = jac
-                ),
-            ],
-        )
-    end
-    return scens
+    return sparse_triples(
+        sparse_jacobian_canonical(diffsquarecube_vecmat, diffsquarecube_vecmat!, x; jac = diffsquarecube_vecmat_jacobian(x)), sparse_prep_input(x)
+    )
 end
 
 ## Matrix to matrix
@@ -149,27 +132,9 @@ function diffsquarecube_matmat_jacobian(x::AbstractMatrix)
 end
 
 function sparse_mat_to_mat_scenarios(x::AbstractMatrix)
-    f = diffsquarecube_matmat
-    f! = diffsquarecube_matmat!
-    y = f(x)
-    jac = diffsquarecube_matmat_jacobian(x)
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:jacobian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = jac
-                ),
-                LegacyScenario{:jacobian, pl_op}(
-                    f!, y, x; prep_args = (; y = zero(y), x = x_prep, contexts = ()), res1 = jac
-                ),
-            ],
-        )
-    end
-    return scens
+    return sparse_triples(
+        sparse_jacobian_canonical(diffsquarecube_matmat, diffsquarecube_matmat!, x; jac = diffsquarecube_matmat_jacobian(x)), sparse_prep_input(x)
+    )
 end
 
 ## Vector to scalar
@@ -197,23 +162,11 @@ function sumdiffcube_hessian(x::AbstractVector)
 end
 
 function sparse_vec_to_num_scenarios(x::AbstractVector)
-    f = sumdiffcube
-    grad = sumdiffcube_gradient(x)
-    hess = sumdiffcube_hessian(x)
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:hessian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = grad, res2 = hess
-                ),
-            ],
-        )
-    end
-    return scens
+    canonical = canonical_scenario(
+        value_gradient_and_hessian, sumdiffcube, x;
+        res1 = sumdiffcube_gradient(x), res2 = sumdiffcube_hessian(x),
+    )
+    return sparse_triples([canonical => true], sparse_prep_input(x))
 end
 
 ## Matrix to scalar
@@ -229,23 +182,11 @@ function sumdiffcube_mat_hessian(x::AbstractMatrix)
 end
 
 function sparse_mat_to_num_scenarios(x::AbstractMatrix)
-    f = sumdiffcube_mat
-    grad = sumdiffcube_mat_gradient(x)
-    hess = sumdiffcube_mat_hessian(x)
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-
-    scens = LegacyScenario[]
-    for pl_op in (:out, :in)
-        append!(
-            scens,
-            [
-                LegacyScenario{:hessian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = grad, res2 = hess
-                ),
-            ],
-        )
-    end
-    return scens
+    canonical = canonical_scenario(
+        value_gradient_and_hessian, sumdiffcube_mat, x;
+        res1 = sumdiffcube_mat_gradient(x), res2 = sumdiffcube_mat_hessian(x),
+    )
+    return sparse_triples([canonical => true], sparse_prep_input(x))
 end
 
 ## Various matrices
@@ -281,26 +222,11 @@ end
 
 function squarelinearmap_scenarios(x::AbstractVector, band_sizes)
     n = length(x)
-    scens = LegacyScenario[]
+    scens = TripleScenario[]
     for A in banded_matrix.(eltype(x), n, band_sizes)
         f = SquareLinearMap(A)
-        f! = f
-        y = f(x)
         jac = sparse(squarelinearmap_jacobian(x, A))
-        x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
-        for pl_op in (:out, :in)
-            append!(
-                scens,
-                [
-                    LegacyScenario{:jacobian, pl_op}(
-                        f, x; prep_args = (; x = x_prep, contexts = ()), res1 = jac
-                    ),
-                    LegacyScenario{:jacobian, pl_op}(
-                        f!, y, x; prep_args = (; y = zero(y), x = x_prep, contexts = ()), res1 = jac
-                    ),
-                ],
-            )
-        end
+        append!(scens, sparse_triples(sparse_jacobian_canonical(f, f, x; jac), sparse_prep_input(x)))
     end
     return scens
 end
@@ -346,20 +272,15 @@ end
 
 function squarequadraticform_scenarios(x::AbstractVector, band_sizes)
     n = length(x)
-    scens = LegacyScenario[]
-    x_prep = reshape(eltype(x).(1:length(x)) .^ 3, size(x))
+    scens = TripleScenario[]
     for A in banded_matrix.(eltype(x), n, band_sizes)
         f = SquareQuadraticForm(A)
-        grad = squarequadraticform_gradient(x, A)
-        hess = sparse(squarequadraticform_hessian(x, A))
-        for pl_op in (:out, :in)
-            push!(
-                scens,
-                LegacyScenario{:hessian, pl_op}(
-                    f, x; prep_args = (; x = x_prep, contexts = ()), res1 = grad, res2 = hess
-                ),
-            )
-        end
+        canonical = canonical_scenario(
+            value_gradient_and_hessian, f, x;
+            res1 = squarequadraticform_gradient(x, A),
+            res2 = sparse(squarequadraticform_hessian(x, A)),
+        )
+        append!(scens, sparse_triples([canonical => true], sparse_prep_input(x)))
     end
     return scens
 end
@@ -367,9 +288,16 @@ end
 ## Gather
 
 """
-    sparse_scenarios()
+    sparse_scenarios(; kwargs...)
 
-Create a vector of [`LegacyScenario`](@ref)s with sparse array types, focused on sparse Jacobians and Hessians.
+Create a vector of [`TripleScenario`](@ref)s with sparse array types, focused on sparse Jacobians and Hessians.
+
+# Keyword arguments
+
+- `band_sizes=[5, 10, 20]`: band sizes of the random matrices used in larger scenarios (none if empty)
+- `include_constantified=false`, `include_cachified=false`, `include_constantorcachified=false`: add scenarios transformed by the corresponding modifiers
+- `use_tuples=false`: whether cachified scenarios store their caches in tuples
+- `include_mismatched=true`: add scenarios whose preparation does not match their execution
 """
 function sparse_scenarios(;
         band_sizes = [5, 10, 20],
@@ -377,6 +305,7 @@ function sparse_scenarios(;
         include_cachified = false,
         include_constantorcachified = false,
         use_tuples = false,
+        include_mismatched = true,
     )
     x_6 = float.(1:6)
     x_2_3 = float.(reshape(1:6, 2, 3))
@@ -395,10 +324,11 @@ function sparse_scenarios(;
         append!(scens, squarequadraticform_scenarios(x_50, band_sizes))
     end
 
-    final_scens = LegacyScenario[]
+    final_scens = TripleScenario[]
     append!(final_scens, scens)
     include_constantified && append!(final_scens, constantify(scens))
     include_cachified && append!(final_scens, cachify(scens; use_tuples))
     include_constantorcachified && append!(final_scens, constantorcachify(scens))
+    include_mismatched && add_mismatched!(final_scens)
     return final_scens
 end
