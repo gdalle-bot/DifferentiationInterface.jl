@@ -35,6 +35,7 @@ end
     @test x == [1.0, 2.0]
     @test !DIT.should_reprepare(ts)
     @test TripleScenario(ts) === ts
+
     @test string(ts) == string(exec)
 
     # the function is shared, also after a deep copy

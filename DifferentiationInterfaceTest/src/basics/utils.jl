@@ -3,6 +3,8 @@
 
 Return an object with the same structure as `x` but filled with zeros.
 
+For sparse arrays, the structural pattern is preserved.
+
 It is used to build the default preparation and flush inputs of a scenario, which ensures that preparation does not depend on the values of the inputs.
 
 Methods are defined for numbers, arrays, tuples, named tuples, DifferentiationInterface contexts and `nothing`.
@@ -10,6 +12,14 @@ To use other types inside scenarios, define a method for `DifferentiationInterfa
 """
 custom_zero(x::Number) = zero(x)
 custom_zero(x::AbstractArray{<:Number}) = zero(x)
+
+function custom_zero(x::AbstractSparseArray{<:Number})
+    # keep the structural pattern, unlike `zero`
+    z = copy(x)
+    fill!(nonzeros(z), zero(eltype(z)))
+    return z
+end
+
 custom_zero(x::AbstractArray) = map(custom_zero, x)
 custom_zero(x::Union{Tuple, NamedTuple}) = map(custom_zero, x)
 custom_zero(::Nothing) = nothing
