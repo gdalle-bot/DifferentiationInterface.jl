@@ -1,7 +1,7 @@
 """
-    static_scenarios()
+    static_scenarios(; kwargs...)
 
-Create a vector of [`LegacyScenario`](@ref)s with static array types from [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl).
+Create a vector of [`TripleScenario`](@ref)s with static array types from [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl).
 
 !!! warning
 
@@ -10,9 +10,9 @@ Create a vector of [`LegacyScenario`](@ref)s with static array types from [Stati
 function static_scenarios end
 
 """
-    component_scenarios()
+    component_scenarios(; include_mismatched=true)
 
-Create a vector of [`LegacyScenario`](@ref)s with component array types from [ComponentArrays.jl](https://github.com/jonniedie/ComponentArrays.jl).
+Create a vector of [`TripleScenario`](@ref)s with component array types from [ComponentArrays.jl](https://github.com/jonniedie/ComponentArrays.jl).
 
 !!! warning
 
@@ -21,9 +21,9 @@ Create a vector of [`LegacyScenario`](@ref)s with component array types from [Co
 function component_scenarios end
 
 """
-    gpu_scenarios()
+    gpu_scenarios(; kwargs...)
 
-Create a vector of [`LegacyScenario`](@ref)s with GPU array types from [JLArrays.jl](https://github.com/JuliaGPU/GPUArrays.jl/tree/master/lib/JLArrays).
+Create a vector of [`TripleScenario`](@ref)s with GPU array types from [JLArrays.jl](https://github.com/JuliaGPU/GPUArrays.jl/tree/master/lib/JLArrays).
 
 !!! warning
 
