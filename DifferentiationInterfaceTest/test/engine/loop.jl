@@ -12,7 +12,7 @@ using SparseMatrixColorings
 using Test
 using Zygote: Zygote
 
-include("../basics/counting_testset.jl")
+using DifferentiationInterfaceTest: count_tests
 
 f_scalar(x) = sum(abs2, x)
 f_vec!(y, x) = (y .= 2 .* x; nothing)

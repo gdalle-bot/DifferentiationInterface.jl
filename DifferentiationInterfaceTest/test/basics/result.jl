@@ -5,7 +5,7 @@ import DifferentiationInterfaceTest as DIT
 using DifferentiationInterfaceTest: Result
 using Test
 
-include("counting_testset.jl")
+using DifferentiationInterfaceTest: count_tests
 
 approx_kwargs = (; isapprox, atol = 0, rtol = 1.0e-8)
 
