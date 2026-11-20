@@ -12,7 +12,6 @@ DifferentiationInterfaceTest
 ## Entry points
 
 ```@docs
-LegacyScenario
 compute_results
 test_differentiation
 benchmark_differentiation

@@ -21,14 +21,6 @@ function reset_count!(cc::CallCounter)
     return count
 end
 
-@kwdef struct CallsResult
-    preparation::Int = -1
-    prepared_valop::Int = -1
-    prepared_op::Int = -1
-    unprepared_valop::Int = -1
-    unprepared_op::Int = -1
-end
-
 """
     DifferentiationBenchmarkDataRow
 
@@ -44,7 +36,7 @@ Base.@kwdef struct DifferentiationBenchmarkDataRow{T}
     "backend used for benchmarking"
     backend::AbstractADType
     "scenario used for benchmarking"
-    scenario::Union{LegacyScenario, TripleScenario}
+    scenario::TripleScenario
     "differentiation operator used for benchmarking, e.g. `:gradient` or `:hessian`"
     operator::Symbol
     "whether the operator had been prepared"
