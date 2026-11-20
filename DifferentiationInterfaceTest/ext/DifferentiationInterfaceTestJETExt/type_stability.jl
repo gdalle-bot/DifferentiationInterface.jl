@@ -5,9 +5,10 @@ function DIT.test_jet(
         ignored_modules,
         function_filter,
     )
+    subset == :none && return nothing
     calls = DIT.prepared_calls(backend, ts)
     if subset == :full
-        for (f, args) in (calls.preparation, calls.unprepared)
+        foreach((calls.preparation, calls.unprepared)) do (f, args)
             test_opt(f, Base.typesof(args...); ignored_modules, function_filter)
         end
     end
