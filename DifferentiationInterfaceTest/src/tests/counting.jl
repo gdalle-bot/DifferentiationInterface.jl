@@ -1,9 +1,9 @@
-using Test
-
 """
     CountingTestSet
 
 Test set which counts passes and failures instead of reporting them, to check that a testing function detects errors.
+
+Used in the test suite of DifferentiationInterfaceTest.
 
 Nested test sets of the default type inherit this type and add their counts to their parent.
 """
@@ -16,7 +16,8 @@ end
 CountingTestSet(description::AbstractString; kwargs...) = CountingTestSet(description, 0, 0)
 
 Test.record(ts::CountingTestSet, ::Test.Pass) = (ts.passes += 1; ts)
-Test.record(ts::CountingTestSet, ::Union{Test.Fail, Test.Error}) = (ts.failures += 1; ts)
+# any other result is a failure, including custom ones like `JET.JETTestFailure`
+Test.record(ts::CountingTestSet, ::Test.Result) = (ts.failures += 1; ts)
 Test.record(ts::CountingTestSet, ::Test.Broken) = ts
 
 function Test.record(ts::CountingTestSet, child::CountingTestSet)
