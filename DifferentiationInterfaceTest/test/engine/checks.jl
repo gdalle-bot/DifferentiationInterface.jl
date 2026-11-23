@@ -60,7 +60,11 @@ if VERSION < v"1.12-"
                     type_stability = subset, logging = false
                 )
             end
-            @test (counts.failures > 0) == (subset != :none)
+            # preparation does not call the function, but both operators do
+            @test counts == (;
+                passes = length(unstable_scens) * Dict(:none => 0, :prepared => 0, :full => 1)[subset],
+                failures = length(unstable_scens) * Dict(:none => 0, :prepared => 1, :full => 2)[subset],
+            )
         end
     end
 end
