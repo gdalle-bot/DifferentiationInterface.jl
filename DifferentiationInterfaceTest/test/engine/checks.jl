@@ -152,6 +152,30 @@ end
     end
 end
 
+# closures over heap-allocated data, whose `objectid` changes with a deep copy
+make_closure(a, tag) = x -> (CALLS[tag] = get(CALLS, tag, 0) + 1; [sum(abs2, x) * a[1], prod(x)])
+
+@testset "Call counts with closures" begin
+    a = [1.0]
+    J = [2x'; x[2] x[1]]
+    exec_f = make_closure(a, :exec)
+    exec = @scenario value_and_jacobian(exec_f, missing, x) Result([5.0, 2.0], J, nothing)
+    @testset "$name" for (name, prep_f, prep_tag) in (
+            ("Same closure", exec_f, :exec),
+            ("Equal closure", make_closure(a, :exec), :exec),  # `===` to `exec_f`
+            ("Different closure", make_closure([1.0], :prep), :prep),
+        )
+        empty!(CALLS)
+        ts = TripleScenario(exec; prep = Scenario(value_and_jacobian, prep_f, (), (zero(x),)))
+        data = benchmark_differentiation(
+            AutoFiniteDiff(; fdjtype = Val(:forward)), [ts];
+            benchmark = :full, benchmark_seconds = 0.01, logging = false
+        ) |> DataFrame
+        @test data[!, :calls] == [3, 1, 4]  # prepared, preparation, unprepared
+        @test haskey(CALLS, prep_tag)
+    end
+end
+
 @testset "Benchmark subset :none" begin
     data = benchmark_differentiation(
         AutoForwardDiff(), stable_scens; benchmark = :none, logging = false
