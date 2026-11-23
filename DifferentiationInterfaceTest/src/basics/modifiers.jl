@@ -1,35 +1,88 @@
 #=
 Hook-based scenario modifiers.
 
-A modifier is a callable struct which transforms scenarios. It only implements the hooks it needs:
-
-- `applies_to(m, s)`: whether `m` can modify the scenario `s`
-- `modify_func(m, f, ref)`: new function, possibly using the primal output of the reference scenario `ref`
-- `modify_contexts(m, contexts, ref)`: new contexts
-- `modify_inputs(m, xs)`: new tuple of primal inputs
-- `modify_tangents(m, t)`: new tuple of tangents
-- `modify_output(m, k, x)`: new output of order `k`, applied to reference results
-- `modify_buffer(m, k, x)`: new buffer for order `k` (the primal output `y` of in-place functions for `k = 0`), unchanged by default since buffers are never read: only modifiers which change their structure need it
-- `name_suffix(m)`: suffix added to the scenario name
-
-When applied to a `TripleScenario`, the function is modified once and shared between the three scenarios, and the contexts of the preparation and flush scenarios are zeroed.
+A modifier is a callable struct which transforms scenarios, by implementing only the hooks it needs (see their docstrings).
+Every hook returns a new object and must not modify its arguments in-place.
 =#
 
 """
     ScenarioModifier
 
 Abstract supertype for scenario modifiers, which can be applied to a [`Scenario`](@ref), a [`TripleScenario`](@ref) or a vector of scenarios (keeping only those to which the modifier applies).
+
+A modifier implements some of the following hooks, whose default versions leave the scenario unchanged:
+
+- [`applies_to`](@ref)
+- [`modify_func`](@ref)
+- [`modify_contexts`](@ref)
+- [`modify_inputs`](@ref)
+- [`modify_tangents`](@ref)
+- [`modify_output`](@ref)
+- [`modify_buffer`](@ref)
+- [`name_suffix`](@ref)
+
+Each hook receives the reference scenario `ref`, which is the scenario being modified, or the execution scenario when modifying the preparation and flush scenarios of a `TripleScenario`.
+When applied to a `TripleScenario`, the function is modified once and shared between the three scenarios (unless they had different functions to begin with), and the contexts of the preparation and flush scenarios are zeroed.
 """
 abstract type ScenarioModifier end
 
+"""
+    applies_to(m::ScenarioModifier, ref::Scenario)
+
+Return `true` if `m` can modify the scenario `ref` (`true` by default).
+"""
 applies_to(::ScenarioModifier, ::Scenario) = true
 applies_to(m::ScenarioModifier, ts::TripleScenario) = applies_to(m, exec_scenario(ts))
+
+"""
+    modify_func(m::ScenarioModifier, f, ref::Scenario)
+
+Return the new function replacing `f` (`f` itself by default).
+"""
 modify_func(::ScenarioModifier, @nospecialize(f), @nospecialize(::Scenario)) = f
+
+"""
+    modify_contexts(m::ScenarioModifier, contexts::Tuple, ref::Scenario)
+
+Return the new tuple of contexts replacing `contexts` (`contexts` itself by default).
+"""
 modify_contexts(::ScenarioModifier, @nospecialize(contexts::Tuple), @nospecialize(::Scenario)) = contexts
-modify_inputs(::ScenarioModifier, @nospecialize(xs::Tuple)) = xs
-modify_tangents(::ScenarioModifier, t) = t
-modify_output(::ScenarioModifier, k::Integer, x) = x
-modify_buffer(::ScenarioModifier, k::Integer, x) = x
+
+"""
+    modify_inputs(m::ScenarioModifier, xs::Tuple, ref::Scenario)
+
+Return the new tuple of primal inputs replacing `xs` (`xs` itself by default).
+"""
+modify_inputs(::ScenarioModifier, @nospecialize(xs::Tuple), @nospecialize(::Scenario)) = xs
+
+"""
+    modify_tangents(m::ScenarioModifier, t::Tuple, ref::Scenario)
+
+Return the new tuple of tangents replacing `t`, for operators which take tangents (`t` itself by default).
+"""
+modify_tangents(::ScenarioModifier, t::Tuple, @nospecialize(::Scenario)) = t
+
+"""
+    modify_output(m::ScenarioModifier, k::Integer, x, ref::Scenario)
+
+Return the new reference output of order `k` replacing `x` in the result of the scenario (`x` itself by default).
+"""
+modify_output(::ScenarioModifier, k::Integer, x, @nospecialize(::Scenario)) = x
+
+"""
+    modify_buffer(m::ScenarioModifier, k::Integer, x, ref::Scenario)
+
+Return the new buffer of order `k` replacing `x` (`x` itself by default), where the buffer of order `0` is the primal output `y` of an in-place function.
+
+Buffers are never read, so only modifiers which change their structure need this hook.
+"""
+modify_buffer(::ScenarioModifier, k::Integer, x, @nospecialize(::Scenario)) = x
+
+"""
+    name_suffix(m::ScenarioModifier)
+
+Return the suffix appended to the name of modified scenarios (the lowercase name of the type of `m` by default).
+"""
 name_suffix(m::ScenarioModifier) = lowercase(string(nameof(typeof(m))))
 
 function modify_scenario(
@@ -40,10 +93,10 @@ function modify_scenario(
         zero_contexts::Bool,
     )
     op = operator(s)
-    new_value_args = map(y -> modify_buffer(m, 0, y), value_args(s))
+    new_value_args = map(y -> modify_buffer(m, 0, y, ref), value_args(s))
     new_buffers = if is_inplace(op)
         map(
-            (k, b) -> modify_buffer(m, k, b),
+            (k, b) -> modify_buffer(m, k, b, ref),
             filter(!iszero, returned_orders(op)),
             output_buffers(s),
         )
@@ -51,7 +104,7 @@ function modify_scenario(
         ()
     end
     t = tangents(s)
-    new_tangents = isnothing(t) ? () : (modify_tangents(m, t),)
+    new_tangents = isnothing(t) ? () : (modify_tangents(m, t, ref),)
     new_contexts = modify_contexts(m, contexts(s), ref)
     if zero_contexts
         new_contexts = map(custom_zero, new_contexts)
@@ -63,7 +116,7 @@ function modify_scenario(
         Result(
             map((0, 1, 2)) do k
                 v = getorder(r, k)
-                isnothing(v) ? nothing : modify_output(m, k, v)
+                isnothing(v) ? nothing : modify_output(m, k, v, ref)
             end...,
         )
     end
@@ -72,7 +125,7 @@ function modify_scenario(
         op,
         new_func,
         (new_value_args..., new_buffers...),
-        (modify_inputs(m, primal_inputs(s))..., new_tangents..., new_contexts...);
+        (modify_inputs(m, primal_inputs(s), ref)..., new_tangents..., new_contexts...);
         result = new_result,
         name = new_name,
     )
@@ -92,7 +145,12 @@ function (m::ScenarioModifier)(@nospecialize(ts::TripleScenario))
     end
     new_func = modify_func(m, func(exec), exec)
     function modify_other(s::Scenario)
+        # preparation may be tied to the function object (e.g. a closure with buffers):
+        # if `s` shares its function with `exec`, it must share the new function too,
+        # otherwise its own function is modified separately
         other_func = func(s) === func(exec) ? new_func : modify_func(m, func(s), exec)
+        # `exec` is the reference because only it is guaranteed to know its primal output,
+        # and the contexts are zeroed because preparation must not depend on their values
         return modify_scenario(m, s, exec, other_func; zero_contexts = true)
     end
     return TripleScenario(
@@ -118,7 +176,7 @@ operator_place(ts::TripleScenario) = operator_place(exec_scenario(ts))
 
 struct ZeroDer <: ScenarioModifier end
 
-modify_output(::ZeroDer, k::Integer, x) = iszero(k) ? x : custom_zero(x)
+modify_output(::ZeroDer, k::Integer, x, @nospecialize(::Scenario)) = iszero(k) ? x : custom_zero(x)
 name_suffix(::ZeroDer) = "zero derivative"
 
 """
@@ -149,10 +207,12 @@ struct Batchify <: ScenarioModifier end
 function applies_to(::Batchify, @nospecialize(s::Scenario))
     return needs_tangent(operator(s)) && length(tangents(s)) == 1
 end
-modify_tangents(::Batchify, t::Tuple) = (only(t), -only(t))
-modify_output(::Batchify, k::Integer, x) = x
-modify_output(::Batchify, k::Integer, x::Tuple) = (only(x), -only(x))
-modify_buffer(m::Batchify, k::Integer, x) = modify_output(m, k, x)
+modify_tangents(::Batchify, t::Tuple, @nospecialize(::Scenario)) = (only(t), -only(t))
+# only the highest order is a tuple of tangents, a primal output could be a tuple too
+function modify_output(::Batchify, k::Integer, x, @nospecialize(ref::Scenario))
+    return k == order(operator(ref)) ? (only(x), -only(x)) : x
+end
+modify_buffer(m::Batchify, k::Integer, x, @nospecialize(ref::Scenario)) = modify_output(m, k, x, ref)
 name_suffix(::Batchify) = "batchified"
 
 batchify(s::AnyNewScenario) = Batchify()(s)
@@ -175,7 +235,7 @@ function modify_func(m::Closurify, @nospecialize(f), @nospecialize(ref::Scenario
     y_buffer = [custom_zero(primal_output(ref))]
     return WritableClosure{function_place(ref)}(f, x_buffer, y_buffer, m.a, m.b)
 end
-modify_output(m::Closurify, k::Integer, x) = mymultiply(x, m.a + only(m.b))
+modify_output(m::Closurify, k::Integer, x, @nospecialize(::Scenario)) = mymultiply(x, m.a + only(m.b))
 name_suffix(::Closurify) = "closurified"
 
 closurify(s::AnyNewScenario) = Closurify()(s)
@@ -192,7 +252,7 @@ Constantify() = Constantify(3.0)
 applies_to(::Constantify, @nospecialize(s::Scenario)) = isempty(contexts(s))
 modify_func(::Constantify, @nospecialize(f), @nospecialize(ref::Scenario)) = MultiplyByConstant{function_place(ref)}(f)
 modify_contexts(m::Constantify, @nospecialize(::Tuple), @nospecialize(::Scenario)) = (Constant(m.a),)
-modify_output(m::Constantify, k::Integer, x) = mymultiply(x, m.a)
+modify_output(m::Constantify, k::Integer, x, @nospecialize(::Scenario)) = mymultiply(x, m.a)
 name_suffix(::Constantify) = "constantified"
 
 constantify(s::AnyNewScenario) = Constantify()(s)
@@ -242,7 +302,7 @@ function modify_contexts(m::ConstantOrCachify, @nospecialize(::Tuple), @nospecia
     cache = y isa Number ? [zero(y)] : similar(y)
     return (ConstantOrCache((; cache, constant = (; m.a, b = copy(m.b)))),)
 end
-modify_output(m::ConstantOrCachify, k::Integer, x) = mymultiply(x, m.a + only(m.b))
+modify_output(m::ConstantOrCachify, k::Integer, x, @nospecialize(::Scenario)) = mymultiply(x, m.a + only(m.b))
 name_suffix(::ConstantOrCachify) = "constantorcachified"
 
 constantorcachify(s::AnyNewScenario) = ConstantOrCachify()(s)
@@ -265,13 +325,15 @@ map_context(m::MapArrays, c::Cache) = Cache(map_array(m.mutable, unwrap(c)))
 map_context(m::MapArrays, c::ConstantOrCache) = ConstantOrCache(map_array(m.mutable, unwrap(c)))
 
 modify_func(m::MapArrays, @nospecialize(f), @nospecialize(::Scenario)) = m.func(f)
-modify_inputs(m::MapArrays, @nospecialize(xs::Tuple)) = map_array(m.immutable, xs)
-modify_tangents(m::MapArrays, t) = map_array(m.immutable, t)
+function modify_inputs(m::MapArrays, @nospecialize(xs::Tuple), @nospecialize(::Scenario))
+    return map_array(m.immutable, xs)
+end
+modify_tangents(m::MapArrays, t::Tuple, @nospecialize(::Scenario)) = map_array(m.immutable, t)
 function modify_contexts(m::MapArrays, @nospecialize(contexts::Tuple), @nospecialize(::Scenario))
     return map(c -> map_context(m, c), contexts)
 end
-modify_output(m::MapArrays, k::Integer, x) = map_array(m.immutable, x)
-modify_buffer(m::MapArrays, k::Integer, x) = map_array(m.mutable, x)
+modify_output(m::MapArrays, k::Integer, x, @nospecialize(::Scenario)) = map_array(m.immutable, x)
+modify_buffer(m::MapArrays, k::Integer, x, @nospecialize(::Scenario)) = map_array(m.mutable, x)
 name_suffix(::MapArrays) = "mapped arrays"
 
 """
@@ -289,7 +351,9 @@ map_arrays(immutable, mutable; func = identity) = MapArrays(func, immutable, mut
 
 ## Preparation mismatch
 
-mismatched_eltype(x::Number) = Float32(x)
+mismatched_eltype(x::Float32) = Float64(x)
+mismatched_eltype(x::Real) = Float32(x)
+mismatched_eltype(x::Complex) = complex(mismatched_eltype(real(x)), mismatched_eltype(imag(x)))
 mismatched_eltype(x::AbstractArray) = map(mismatched_eltype, x)
 
 """
@@ -298,7 +362,7 @@ mismatched_eltype(x::AbstractArray) = map(mismatched_eltype, x)
 Return a [`TripleScenario`](@ref) whose execution is incompatible with its (default) preparation, which must trigger a `DifferentiationInterface.PreparationMismatchError`.
 
 - `kind = :function`: the execution function is `nothing`
-- `kind = :input`: the execution input has a different element type
+- `kind = :input`: the execution input has a different element type (`Float32` instead of `Float64` and vice versa)
 
 Preparation is done with the original function and input types, so that it does not need to be compiled again.
 """
