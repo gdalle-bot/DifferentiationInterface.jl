@@ -15,6 +15,7 @@ A modifier implements some of the following hooks, whose default versions leave 
 - [`applies_to`](@ref)
 - [`modify_func`](@ref)
 - [`modify_contexts`](@ref)
+- [`modify_inputs`](@ref)
 - [`modify_tangents`](@ref)
 - [`modify_output`](@ref)
 - [`modify_buffer`](@ref)
@@ -46,6 +47,13 @@ modify_func(::ScenarioModifier, @nospecialize(f), @nospecialize(::Scenario)) = f
 Return the new tuple of contexts replacing `contexts` (`contexts` itself by default).
 """
 modify_contexts(::ScenarioModifier, @nospecialize(contexts::Tuple), @nospecialize(::Scenario)) = contexts
+
+"""
+    modify_inputs(m::ScenarioModifier, xs::Tuple, ref::Scenario)
+
+Return the new tuple of primal inputs replacing `xs` (`xs` itself by default).
+"""
+modify_inputs(::ScenarioModifier, @nospecialize(xs::Tuple), @nospecialize(::Scenario)) = xs
 
 """
     modify_tangents(m::ScenarioModifier, t::Tuple, ref::Scenario)
@@ -117,7 +125,7 @@ function modify_scenario(
         op,
         new_func,
         (new_value_args..., new_buffers...),
-        (primal_inputs(s)..., new_tangents..., new_contexts...);
+        (modify_inputs(m, primal_inputs(s), ref)..., new_tangents..., new_contexts...);
         result = new_result,
         name = new_name,
     )
@@ -299,6 +307,47 @@ name_suffix(::ConstantOrCachify) = "constantorcachified"
 
 constantorcachify(s::AnyNewScenario) = ConstantOrCachify()(s)
 constantorcachify(scens::AbstractVector) = ConstantOrCachify()(scens)
+
+## Map arrays
+
+struct MapArrays{F, I, M} <: ScenarioModifier
+    func::F
+    immutable::I
+    mutable::M
+end
+
+map_array(f, x::AbstractArray) = f(x)
+map_array(f, x::Union{Tuple, NamedTuple}) = map(y -> map_array(f, y), x)
+map_array(f, x) = x
+
+map_context(m::MapArrays, c::Constant) = Constant(map_array(m.immutable, unwrap(c)))
+map_context(m::MapArrays, c::Cache) = Cache(map_array(m.mutable, unwrap(c)))
+map_context(m::MapArrays, c::ConstantOrCache) = ConstantOrCache(map_array(m.mutable, unwrap(c)))
+
+modify_func(m::MapArrays, @nospecialize(f), @nospecialize(::Scenario)) = m.func(f)
+function modify_inputs(m::MapArrays, @nospecialize(xs::Tuple), @nospecialize(::Scenario))
+    return map_array(m.immutable, xs)
+end
+modify_tangents(m::MapArrays, t::Tuple, @nospecialize(::Scenario)) = map_array(m.immutable, t)
+function modify_contexts(m::MapArrays, @nospecialize(contexts::Tuple), @nospecialize(::Scenario))
+    return map(c -> map_context(m, c), contexts)
+end
+modify_output(m::MapArrays, k::Integer, x, @nospecialize(::Scenario)) = map_array(m.immutable, x)
+modify_buffer(m::MapArrays, k::Integer, x, @nospecialize(::Scenario)) = map_array(m.mutable, x)
+name_suffix(::MapArrays) = "mapped arrays"
+
+"""
+    map_arrays(immutable, mutable; func=identity)
+
+Return a scenario modifier which converts every array in a scenario:
+
+- `immutable` is applied to primal inputs, tangents, constant contexts and reference results;
+- `mutable` is applied to the primal output of in-place functions, output buffers and caches;
+- `func` is applied to the function.
+
+Useful to test array types defined in other packages, for instance static or GPU arrays.
+"""
+map_arrays(immutable, mutable; func = identity) = MapArrays(func, immutable, mutable)
 
 ## Preparation mismatch
 
