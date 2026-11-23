@@ -143,7 +143,6 @@ function test_correctness(
         rtol::Real,
         scenario_intact::Bool,
         reprepare::Bool,
-        sparsity::Bool = false,  # automatic for call-based scenarios
     )
     new_ts = deepcopy(ts)
     exec_s, flush_s = exec_scenario(new_ts), flush_scenario(new_ts)

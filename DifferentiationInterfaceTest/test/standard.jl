@@ -44,7 +44,6 @@ sparse_backend = AutoSparse(
 test_differentiation(
     sparse_backend,
     sparse_scenarios(; include_cachified = true, use_tuples = false);
-    sparsity = true,
     logging = LOGGING,
 )
 
