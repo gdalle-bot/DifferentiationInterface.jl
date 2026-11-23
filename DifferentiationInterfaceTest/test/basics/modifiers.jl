@@ -122,6 +122,11 @@ end
         end
     end
     @test_throws ArgumentError DIT.batchify(first(scens))
+    # only the tangent outputs are batchified, even if the primal output is a tuple
+    s = DIT.exec_scenario(first(DIT.batchify(scens)))
+    k = DIT.order(DIT.operator(s))
+    @test DIT.modify_output(DIT.Batchify(), 0, (1.0, 2.0), s) == (1.0, 2.0)
+    @test DIT.modify_output(DIT.Batchify(), k, (1.0,), s) == (1.0, -1.0)
 end
 
 @testset "Contexts" begin
@@ -224,6 +229,21 @@ end
     counts = correctness_counts(AutoForwardDiff(), m(DIT.constantify(scens)))
     @test counts.failures == 0
     @test counts.passes > 0
+end
+
+@testset "Mismatched element types" begin
+    @test DIT.mismatched_eltype(1.0) === 1.0f0
+    @test DIT.mismatched_eltype(1.0f0) === 1.0
+    @test DIT.mismatched_eltype(1) === 1.0f0
+    @test DIT.mismatched_eltype(1.0 + 2.0im) === 1.0f0 + 2.0f0im
+    @test DIT.mismatched_eltype(1.0f0 + 2.0f0im) === 1.0 + 2.0im
+    @test DIT.mismatched_eltype([1.0f0, 2.0f0]) isa Vector{Float64}
+    # a scenario whose input is already `Float32` is also mismatched
+    s32 = @scenario value_and_gradient(sum, missing, [1.0f0, 2.0f0]) Result(3.0f0, [1.0f0, 1.0f0], nothing)
+    mismatched = DIT.mismatch(s32; kind = :input)
+    @test eltype(DIT.primal_input(DIT.exec_scenario(mismatched))) == Float64
+    counts = correctness_counts(AutoForwardDiff(), [mismatched])
+    @test counts == (; passes = 3, failures = 0)
 end
 
 @testset "Buffers are not modified" begin
