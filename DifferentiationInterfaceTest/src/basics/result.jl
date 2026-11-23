@@ -130,7 +130,10 @@ function test_approx(
 end
 
 function compare_approx(computed, reference; isapprox::Function, atol::Real, rtol::Real)
-    @test isapprox(computed, reference; atol, rtol)
+    # no keyword arguments inside `@test`: on failure display, `Test` would promote them with the
+    # computed value, which errors for some number types (like `Tracker.TrackedReal`)
+    approx(c, r) = isapprox(c, r; atol, rtol)
+    @test approx(computed, reference)
     return nothing
 end
 
