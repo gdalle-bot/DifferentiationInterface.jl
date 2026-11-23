@@ -1,49 +1,44 @@
 function identity_scenarios(x::Number; dx::Number, dy::Number)
     f = identity
-    dy_from_dx = dx
-    dx_from_dy = dy
-    der = oneunit(x)
-
-    return [
-        LegacyScenario{:pushforward, :out}(f, x, (dx,); res1 = (dy_from_dx,)),
-        LegacyScenario{:pullback, :out}(f, x, (dy,); res1 = (dx_from_dy,)),
-        LegacyScenario{:derivative, :out}(f, x; res1 = der),
+    canonical = [
+        canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (dx,)),
+        canonical_scenario(value_and_pullback, f, x, (dy,); res1 = (dy,)),
+        canonical_scenario(value_and_derivative, f, x; res1 = oneunit(x)),
     ]
+    return mapreduce(s -> place_variants(s; inplace_op = false), vcat, canonical)
 end
 
 function sum_scenarios(x::AbstractArray; dx::AbstractArray, dy::Number)
     f = sum
-    dy_from_dx = sum(dx)
-    dx_from_dy = (similar(x) .= dy)
     grad = similar(x)
     grad .= oneunit(eltype(x))
-
-    return [
-        LegacyScenario{:pushforward, :out}(f, x, (dx,); res1 = (dy_from_dx,)),
-        LegacyScenario{:pullback, :in}(f, x, (dy,); res1 = (dx_from_dy,)),
-        LegacyScenario{:gradient, :in}(f, x; res1 = grad),
-    ]
+    pushforward_scen = canonical_scenario(value_and_pushforward, f, x, (dx,); res1 = (sum(dx),))
+    pullback_scen = canonical_scenario(value_and_pullback, f, x, (dy,); res1 = ((similar(x) .= dy),))
+    gradient_scen = canonical_scenario(value_and_gradient, f, x; res1 = grad)
+    return vcat(
+        place_variants(pushforward_scen; inplace_op = false),
+        place_variants(pullback_scen; inplace_op = true),
+        place_variants(gradient_scen; inplace_op = true),
+    )
 end
 
 function copyto!_scenarios(x::AbstractArray; dx::AbstractArray, dy::AbstractArray)
     f! = copyto!
     y = similar(x)
     f!(y, x)
-    dy_from_dx = dx
-    dx_from_dy = dy
     jac = Matrix(Diagonal(ones(eltype(x), length(x))))
-
-    return [
-        LegacyScenario{:pushforward, :in}(f!, y, x, (dx,); res1 = (dy_from_dx,)),
-        LegacyScenario{:pullback, :in}(f!, y, x, (dy,); res1 = (dx_from_dy,)),
-        LegacyScenario{:jacobian, :in}(f!, y, x; res1 = jac),
+    canonical = [
+        canonical_scenario!(value_and_pushforward, f!, y, x, (dx,); res1 = (dx,)),
+        canonical_scenario!(value_and_pullback, f!, y, x, (dy,); res1 = (dy,)),
+        canonical_scenario!(value_and_jacobian, f!, y, x; res1 = jac),
     ]
+    return mapreduce(s -> place_variants(s; inplace_op = true), vcat, canonical)
 end
 
 """
     allocfree_scenarios()
 
-Create a vector of [`LegacyScenario`](@ref)s with functions that do not allocate.
+Create a vector of [`TripleScenario`](@ref)s with functions and operators that do not allocate.
 
 !!! warning
 
@@ -63,5 +58,5 @@ function allocfree_scenarios()
         sum_scenarios(x_6; dx = dx_6, dy = dy_),
         copyto!_scenarios(x_6; dx = dx_6, dy = dy_6),
     )
-    return scens
+    return map(TripleScenario, scens)
 end

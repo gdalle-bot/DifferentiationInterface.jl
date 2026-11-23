@@ -56,3 +56,14 @@ function all_variants(@nospecialize(s::Scenario); include_inplace::Bool)
     end
     return [change_operator(s, op) for op in ops]
 end
+
+"""
+    place_variants(s::Scenario; inplace_op::Bool)
+
+Return the vector of scenarios with the operators of the family of `s` which are in-place (if `inplace_op` is `true`) or out-of-place (otherwise), with and without value.
+"""
+function place_variants(@nospecialize(s::Scenario); inplace_op::Bool)
+    std = standard(operator(s))
+    ops = inplace_op ? (inplace(std), inplace(with_value(std))) : (std, with_value(std))
+    return [change_operator(s, op) for op in ops]
+end
