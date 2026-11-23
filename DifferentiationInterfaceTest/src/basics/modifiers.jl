@@ -38,28 +38,28 @@ applies_to(m::ScenarioModifier, ts::TripleScenario) = applies_to(m, exec_scenari
 
 Return the new function replacing `f` (`f` itself by default).
 """
-modify_func(::ScenarioModifier, f, ::Scenario) = f
+modify_func(::ScenarioModifier, @nospecialize(f), @nospecialize(::Scenario)) = f
 
 """
     modify_contexts(m::ScenarioModifier, contexts::Tuple, ref::Scenario)
 
 Return the new tuple of contexts replacing `contexts` (`contexts` itself by default).
 """
-modify_contexts(::ScenarioModifier, contexts::Tuple, ::Scenario) = contexts
+modify_contexts(::ScenarioModifier, @nospecialize(contexts::Tuple), @nospecialize(::Scenario)) = contexts
 
 """
     modify_tangents(m::ScenarioModifier, t::Tuple, ref::Scenario)
 
 Return the new tuple of tangents replacing `t`, for operators which take tangents (`t` itself by default).
 """
-modify_tangents(::ScenarioModifier, t::Tuple, ::Scenario) = t
+modify_tangents(::ScenarioModifier, t::Tuple, @nospecialize(::Scenario)) = t
 
 """
     modify_output(m::ScenarioModifier, k::Integer, x, ref::Scenario)
 
 Return the new reference output of order `k` replacing `x` in the result of the scenario (`x` itself by default).
 """
-modify_output(::ScenarioModifier, k::Integer, x, ::Scenario) = x
+modify_output(::ScenarioModifier, k::Integer, x, @nospecialize(::Scenario)) = x
 
 """
     modify_buffer(m::ScenarioModifier, k::Integer, x, ref::Scenario)
@@ -68,7 +68,7 @@ Return the new buffer of order `k` replacing `x` (`x` itself by default), where 
 
 Buffers are never read, so only modifiers which change their structure need this hook.
 """
-modify_buffer(::ScenarioModifier, k::Integer, x, ::Scenario) = x
+modify_buffer(::ScenarioModifier, k::Integer, x, @nospecialize(::Scenario)) = x
 
 """
     name_suffix(m::ScenarioModifier)
@@ -78,7 +78,11 @@ Return the suffix appended to the name of modified scenarios (the lowercase name
 name_suffix(m::ScenarioModifier) = lowercase(string(nameof(typeof(m))))
 
 function modify_scenario(
-        m::ScenarioModifier, s::Scenario, ref::Scenario, new_func; zero_contexts::Bool
+        @nospecialize(m::ScenarioModifier),
+        @nospecialize(s::Scenario),
+        @nospecialize(ref::Scenario),
+        @nospecialize(new_func);
+        zero_contexts::Bool,
     )
     op = operator(s)
     new_value_args = map(y -> modify_buffer(m, 0, y, ref), value_args(s))
@@ -119,14 +123,14 @@ function modify_scenario(
     )
 end
 
-function (m::ScenarioModifier)(s::Scenario)
+function (m::ScenarioModifier)(@nospecialize(s::Scenario))
     if !applies_to(m, s)
         throw(ArgumentError("Modifier `$m` does not apply to scenario `$s`"))
     end
     return modify_scenario(m, s, s, modify_func(m, func(s), s); zero_contexts = false)
 end
 
-function (m::ScenarioModifier)(ts::TripleScenario)
+function (m::ScenarioModifier)(@nospecialize(ts::TripleScenario))
     exec = exec_scenario(ts)
     if !applies_to(m, exec)
         throw(ArgumentError("Modifier `$m` does not apply to scenario `$ts`"))
@@ -164,7 +168,7 @@ operator_place(ts::TripleScenario) = operator_place(exec_scenario(ts))
 
 struct ZeroDer <: ScenarioModifier end
 
-modify_output(::ZeroDer, k::Integer, x, ::Scenario) = iszero(k) ? x : custom_zero(x)
+modify_output(::ZeroDer, k::Integer, x, @nospecialize(::Scenario)) = iszero(k) ? x : custom_zero(x)
 name_suffix(::ZeroDer) = "zero derivative"
 
 """
@@ -183,7 +187,7 @@ struct ChangeFunction{F} <: ScenarioModifier
     f::F
 end
 
-modify_func(m::ChangeFunction, _, ::Scenario) = m.f
+modify_func(m::ChangeFunction, @nospecialize(_), @nospecialize(::Scenario)) = m.f
 name_suffix(::ChangeFunction) = "new function"
 
 change_function(s::AnyNewScenario, new_f) = ChangeFunction(new_f)(s)
@@ -192,15 +196,15 @@ change_function(s::AnyNewScenario, new_f) = ChangeFunction(new_f)(s)
 
 struct Batchify <: ScenarioModifier end
 
-function applies_to(::Batchify, s::Scenario)
+function applies_to(::Batchify, @nospecialize(s::Scenario))
     return needs_tangent(operator(s)) && length(tangents(s)) == 1
 end
-modify_tangents(::Batchify, t::Tuple, ::Scenario) = (only(t), -only(t))
+modify_tangents(::Batchify, t::Tuple, @nospecialize(::Scenario)) = (only(t), -only(t))
 # only the highest order is a tuple of tangents, a primal output could be a tuple too
-function modify_output(::Batchify, k::Integer, x, ref::Scenario)
+function modify_output(::Batchify, k::Integer, x, @nospecialize(ref::Scenario))
     return k == order(operator(ref)) ? (only(x), -only(x)) : x
 end
-modify_buffer(m::Batchify, k::Integer, x, ref::Scenario) = modify_output(m, k, x, ref)
+modify_buffer(m::Batchify, k::Integer, x, @nospecialize(ref::Scenario)) = modify_output(m, k, x, ref)
 name_suffix(::Batchify) = "batchified"
 
 batchify(s::AnyNewScenario) = Batchify()(s)
@@ -215,15 +219,15 @@ end
 
 Closurify() = Closurify(3.0, [4.0])
 
-function applies_to(::Closurify, s::Scenario)
+function applies_to(::Closurify, @nospecialize(s::Scenario))
     return isempty(contexts(s)) && !isnothing(primal_output(s))
 end
-function modify_func(m::Closurify, f, ref::Scenario)
+function modify_func(m::Closurify, @nospecialize(f), @nospecialize(ref::Scenario))
     x_buffer = [custom_zero(primal_input(ref))]
     y_buffer = [custom_zero(primal_output(ref))]
     return WritableClosure{function_place(ref)}(f, x_buffer, y_buffer, m.a, m.b)
 end
-modify_output(m::Closurify, k::Integer, x, ::Scenario) = mymultiply(x, m.a + only(m.b))
+modify_output(m::Closurify, k::Integer, x, @nospecialize(::Scenario)) = mymultiply(x, m.a + only(m.b))
 name_suffix(::Closurify) = "closurified"
 
 closurify(s::AnyNewScenario) = Closurify()(s)
@@ -237,10 +241,10 @@ end
 
 Constantify() = Constantify(3.0)
 
-applies_to(::Constantify, s::Scenario) = isempty(contexts(s))
-modify_func(::Constantify, f, ref::Scenario) = MultiplyByConstant{function_place(ref)}(f)
-modify_contexts(m::Constantify, ::Tuple, ::Scenario) = (Constant(m.a),)
-modify_output(m::Constantify, k::Integer, x, ::Scenario) = mymultiply(x, m.a)
+applies_to(::Constantify, @nospecialize(s::Scenario)) = isempty(contexts(s))
+modify_func(::Constantify, @nospecialize(f), @nospecialize(ref::Scenario)) = MultiplyByConstant{function_place(ref)}(f)
+modify_contexts(m::Constantify, @nospecialize(::Tuple), @nospecialize(::Scenario)) = (Constant(m.a),)
+modify_output(m::Constantify, k::Integer, x, @nospecialize(::Scenario)) = mymultiply(x, m.a)
 name_suffix(::Constantify) = "constantified"
 
 constantify(s::AnyNewScenario) = Constantify()(s)
@@ -252,11 +256,11 @@ struct Cachify <: ScenarioModifier
     use_tuples::Bool
 end
 
-function applies_to(::Cachify, s::Scenario)
+function applies_to(::Cachify, @nospecialize(s::Scenario))
     return isempty(contexts(s)) && !isnothing(primal_output(s))
 end
-modify_func(::Cachify, f, ref::Scenario) = StoreInCache{function_place(ref)}(f)
-function modify_contexts(m::Cachify, ::Tuple, ref::Scenario)
+modify_func(::Cachify, @nospecialize(f), @nospecialize(ref::Scenario)) = StoreInCache{function_place(ref)}(f)
+function modify_contexts(m::Cachify, @nospecialize(::Tuple), @nospecialize(ref::Scenario))
     y = primal_output(ref)
     y_cache = y isa Number ? [zero(y)] : similar(y)
     if m.use_tuples
@@ -279,18 +283,18 @@ end
 
 ConstantOrCachify() = ConstantOrCachify(3.0, [4.0])
 
-function applies_to(::ConstantOrCachify, s::Scenario)
+function applies_to(::ConstantOrCachify, @nospecialize(s::Scenario))
     return isempty(contexts(s)) && !isnothing(primal_output(s))
 end
-function modify_func(::ConstantOrCachify, f, ref::Scenario)
+function modify_func(::ConstantOrCachify, @nospecialize(f), @nospecialize(ref::Scenario))
     return MultiplyByConstantAndStoreInCache{function_place(ref)}(f)
 end
-function modify_contexts(m::ConstantOrCachify, ::Tuple, ref::Scenario)
+function modify_contexts(m::ConstantOrCachify, @nospecialize(::Tuple), @nospecialize(ref::Scenario))
     y = primal_output(ref)
     cache = y isa Number ? [zero(y)] : similar(y)
     return (ConstantOrCache((; cache, constant = (; m.a, b = copy(m.b)))),)
 end
-modify_output(m::ConstantOrCachify, k::Integer, x, ::Scenario) = mymultiply(x, m.a + only(m.b))
+modify_output(m::ConstantOrCachify, k::Integer, x, @nospecialize(::Scenario)) = mymultiply(x, m.a + only(m.b))
 name_suffix(::ConstantOrCachify) = "constantorcachified"
 
 constantorcachify(s::AnyNewScenario) = ConstantOrCachify()(s)
@@ -313,7 +317,7 @@ Return a [`TripleScenario`](@ref) whose execution is incompatible with its (defa
 
 Preparation is done with the original function and input types, so that it does not need to be compiled again.
 """
-function mismatch(s::Scenario; kind::Symbol = :function)
+function mismatch(@nospecialize(s::Scenario); kind::Symbol = :function)
     new_func, new_post = if kind == :function
         nothing, post_backend_args(s)
     elseif kind == :input
@@ -350,7 +354,7 @@ has_matrix(ts::TripleScenario) = has_matrix(exec_scenario(ts))
 
 Return a scenario identical to `s` but whose reference result is computed with `backend`, using the operator with value in the family of `s`.
 """
-function compute_results(s::Scenario, backend::AbstractADType)
+function compute_results(@nospecialize(s::Scenario), backend::AbstractADType)
     op = outofplace(with_value(operator(s)))
     new_s = deepcopy(s)
     output = op(

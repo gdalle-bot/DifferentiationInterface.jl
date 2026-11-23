@@ -3,7 +3,7 @@
 
 Return the tuple of output buffers taken by `op`, built from the reference result `r`.
 """
-function make_buffers(op, r::Result)
+function make_buffers(@nospecialize(op), @nospecialize(r::Result))
     is_inplace(op) || return ()
     return map(k -> mysimilar(getorder(r, k)), filter(!iszero, returned_orders(op)))
 end
@@ -15,7 +15,7 @@ Return a scenario identical to `s` but with operator `new_op`, which must be in 
 
 The output buffers are rebuilt from the reference result of `s`, and the primal output `y` (for in-place functions) is copied.
 """
-function change_operator(s::Scenario, new_op)
+function change_operator(@nospecialize(s::Scenario), @nospecialize(new_op))
     if standard(new_op) !== standard(operator(s))
         throw(ArgumentError("`$new_op` is not in the same family as `$(operator(s))`"))
     end
@@ -34,10 +34,10 @@ function change_operator(s::Scenario, new_op)
     )
 end
 
-with_value(s::Scenario) = change_operator(s, with_value(operator(s)))
-without_value(s::Scenario) = change_operator(s, without_value(operator(s)))
-inplace(s::Scenario) = change_operator(s, inplace(operator(s)))
-outofplace(s::Scenario) = change_operator(s, outofplace(operator(s)))
+with_value(@nospecialize(s::Scenario)) = change_operator(s, with_value(operator(s)))
+without_value(@nospecialize(s::Scenario)) = change_operator(s, without_value(operator(s)))
+inplace(@nospecialize(s::Scenario)) = change_operator(s, inplace(operator(s)))
+outofplace(@nospecialize(s::Scenario)) = change_operator(s, outofplace(operator(s)))
 
 """
     all_variants(s::Scenario; include_inplace::Bool)
@@ -47,7 +47,7 @@ Return the vector of scenarios with every operator in the family of `s`: with an
 The reference result of `s` must contain every differentiation order.
 In-place variants require outputs which can be overwritten, such as mutable arrays: this is up to the caller.
 """
-function all_variants(s::Scenario; include_inplace::Bool)
+function all_variants(@nospecialize(s::Scenario); include_inplace::Bool)
     std = standard(operator(s))
     ops = if include_inplace
         (std, inplace(std), with_value(std), inplace(with_value(std)))

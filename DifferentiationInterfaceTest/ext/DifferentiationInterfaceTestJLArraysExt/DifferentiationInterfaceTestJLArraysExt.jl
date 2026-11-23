@@ -39,7 +39,7 @@ function myjl(scen::DIT.LegacyScenario{op, pl_op, pl_fun}) where {op, pl_op, pl_
 end
 
 function DIT.gpu_scenarios(args...; kwargs...)
-    scens = DIT.default_scenarios(args...; kwargs...)
+    scens = DIT.legacy_default_scenarios(args...; kwargs...)
     return myjl.(scens)
 end
 

@@ -38,16 +38,23 @@ struct Scenario{O, F, A1 <: Tuple, A2 <: Tuple, R <: Union{Result, Nothing}}
     "name for display in test sets and benchmark tables"
     name::Union{String, Nothing}
 
+    # construction is not performance-critical, so we avoid specializing it on every scenario type
     function Scenario(
-            operator::O,
-            func::F,
-            pre_backend_args::A1,
-            post_backend_args::A2;
-            result::R = nothing,
+            @nospecialize(operator),
+            @nospecialize(func),
+            @nospecialize(pre_backend_args::Tuple),
+            @nospecialize(post_backend_args::Tuple);
+            @nospecialize(result::Union{Result, Nothing} = nothing),
             name::Union{AbstractString, Nothing} = nothing,
-        ) where {O, F, A1 <: Tuple, A2 <: Tuple, R <: Union{Result, Nothing}}
+        )
         check_scenario(operator, pre_backend_args, post_backend_args, result)
-        return new{O, F, A1, A2, R}(
+        return new{
+            typeof(operator),
+            typeof(func),
+            typeof(pre_backend_args),
+            typeof(post_backend_args),
+            typeof(result),
+        }(
             operator,
             func,
             pre_backend_args,
@@ -59,14 +66,24 @@ struct Scenario{O, F, A1 <: Tuple, A2 <: Tuple, R <: Union{Result, Nothing}}
 end
 
 function Scenario(;
-        operator, func, pre_backend_args = (), post_backend_args, result = nothing, name = nothing
+        @nospecialize(operator),
+        @nospecialize(func),
+        @nospecialize(pre_backend_args = ()),
+        @nospecialize(post_backend_args),
+        @nospecialize(result = nothing),
+        name = nothing,
     )
     return Scenario(operator, func, pre_backend_args, post_backend_args; result, name)
 end
 
 const INPLACE_FUNCTION_FAMILIES = (:pushforward, :pullback, :derivative, :jacobian)
 
-function check_scenario(op, pre_backend_args::Tuple, post_backend_args::Tuple, result)
+function check_scenario(
+        @nospecialize(op),
+        @nospecialize(pre_backend_args::Tuple),
+        @nospecialize(post_backend_args::Tuple),
+        @nospecialize(result),
+    )
     if !(op in ALL_OPERATORS)
         throw(ArgumentError("`$op` is not a supported DifferentiationInterface operator"))
     end
