@@ -42,6 +42,7 @@ end
 
 function count_calls_triple(backend::AbstractADType, ts::DIT.TripleScenario)
     # each distinct function gets its own counter, and identical functions share one
+    # (the lookup happens before any deep copy, so it does not rely on `objectid` surviving one)
     counters = IdDict{Any, CallCounter}()
     # TODO: use the new version of `change_function` here
     function with_counter(s)
@@ -56,7 +57,10 @@ function count_calls_triple(backend::AbstractADType, ts::DIT.TripleScenario)
         prep = with_counter(DIT.prep_scenario(ts)),
         flush = with_counter(DIT.flush_scenario(ts)),
     )
-    # `prepared_calls` makes a deep copy, which preserves the sharing of counters
+    # `prepared_calls` makes a single deep copy of `new_ts`, which preserves aliasing:
+    # the mutable `Ref` inside a shared counter (and any data captured by its function)
+    # is copied once, so the copies of a shared counter still share their count
+    # (this is tested with closures over heap-allocated data)
     calls = DIT.prepared_calls(backend, new_ts)
     return TripleCallsResult(;
         preparation = call_count(calls.preparation),
